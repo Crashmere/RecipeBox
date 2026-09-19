@@ -1,1 +1,28 @@
-{"name":"recipebox-web","private":true,"version":"1.0.0","type":"module","scripts":{"dev":"vite --host 127.0.0.1","build":"vue-tsc --noEmit && vite build","icons":"node scripts/generate-icons.mjs","test":"vitest run","test:e2e":"playwright test"},"dependencies":{"vue":"3.5.42","vue-router":"5.3.1"},"devDependencies":{"@vitejs/plugin-vue":"6.0.9","typescript":"5.9.3","vite":"8.3.0","vitest":"5.0.1","vue-tsc":"3.3.11","@playwright/test":"^1.55.0"}}
+{
+  "name": "recipebox-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vue-tsc --noEmit && vite build",
+    "icons": "node scripts/generate-icons.mjs",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "format": "prettier --write src e2e *.ts *.json index.html",
+    "format:check": "prettier --check src e2e *.ts *.json index.html"
+  },
+  "dependencies": {
+    "vue": "3.5.42",
+    "vue-router": "5.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@vitejs/plugin-vue": "6.0.9",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3",
+    "vite": "8.3.0",
+    "vitest": "5.0.1",
+    "vue-tsc": "3.3.11"
+  }
+}
