@@ -1,0 +1,2 @@
+import {defineConfig,devices} from '@playwright/test';
+export default defineConfig({testDir:'./e2e',workers:1,timeout:45000,use:{baseURL:'http://127.0.0.1:18083/recipebox/',headless:true,screenshot:'only-on-failure'},projects:[{name:'chromium',use:{browserName:'chromium',channel:process.env.PW_CHANNEL||'chrome'}},{name:'webkit',use:{...devices['iPhone 13'],browserName:'webkit'}}],reporter:'list'});

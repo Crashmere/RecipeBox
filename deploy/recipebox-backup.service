@@ -1,0 +1,18 @@
+[Unit]
+Description=RecipeBox database and media backup
+
+[Service]
+Type=oneshot
+User=recipebox
+Group=recipebox
+ExecStart=/opt/recipebox/bin/recipebox daily --data /opt/recipebox/data --out /opt/recipebox/backups
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/recipebox/data /opt/recipebox/backups
+MemoryMax=256M
+CPUQuota=50%
+Nice=10
+TimeoutStartSec=15min

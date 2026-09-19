@@ -1,0 +1,45 @@
+name: Build and verify
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install image tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips-tools libheif-plugin-libde265
+      - run: npm --prefix web ci && npm --prefix web run build
+      - run: go test -race ./... && go vet ./... && npm --prefix web test
+      - run: for script in deploy/*.sh; do bash -n "$script"; done
+      - run: bash deploy/test-release.sh
+      - run: go build -trimpath -o bin/recipebox ./cmd/recipebox
+      - name: Browser flows
+        run: |
+          mkdir -p .local
+          bin/recipebox init --data .local/e2e-data
+          bin/recipebox serve --data .local/e2e-data --with-prefix &
+          cd web
+          npx playwright install --with-deps chromium webkit
+          PW_CHANNEL=chromium npm run test:e2e
+      - run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o bin/recipebox-linux-amd64 ./cmd/recipebox
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: recipebox-linux
+          path: bin/recipebox-linux-amd64
+          retention-days: 7

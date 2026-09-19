@@ -1,0 +1,27 @@
+[Unit]
+Description=RecipeBox family recipes and pantry
+After=network.target
+
+[Service]
+Type=simple
+User=recipebox
+Group=recipebox
+WorkingDirectory=/opt/recipebox
+ExecStart=/opt/recipebox/bin/recipebox serve --data /opt/recipebox/data
+Environment=VIPS_CONCURRENCY=1
+Environment=MALLOC_ARENA_MAX=2
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/recipebox/data
+MemoryMax=640M
+CPUQuota=100%
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target
