@@ -11,4 +11,12 @@
 
 真实 iPhone/Android 相机、系统相册 HEIC 导出、软键盘和桌面添加图标未用实体设备验证。WebKit 移动视口不等于真机。首版联网使用，暂无离线同步、网页导入或异机备份。
 
-服务器与 CI 验收结果在上线后补充。正式测试只使用隔离合成数据；正式库保持空白供家庭使用。
+## 上线验收
+
+- [GitHub 完整 CI](https://github.com/Crashmere/RecipeBox/actions/runs/35451568046) 与 [独立发布身份的生产发布](https://github.com/Crashmere/RecipeBox/actions/runs/35451762379) 成功；程序提交 de61ccb，当前精确版本以服务器 current-commit 为准。
+- 公网 Chromium/WebKit 的 320/375/1440 px 首页、新菜谱、食品列表/新增、回收站均可访问，无页面错误、横向溢出或表单越界。SVG、ICO、Apple Touch PNG、厨房插画返回正确 Content-Type。
+- 320 px 检查保存条底部与导航顶部正好相接，日期聚焦后完整显示于保存条上方，并检查 420 px 高度视口。真实软键盘仍属于未验证项。
+- ali Linux 隔离 API/图片/备份恢复测试及 4 条发布回退路径通过；测试目录置于 /opt 持久磁盘，避免 /tmp tmpfs 的 5 GiB 空闲预留检查导致无关失败。
+- 正式空库、每日备份 timer、首份一致性快照与隔离恢复校验已完成；发布前快照存在，运行身份/写权限、loopback 监听正确，NRestarts=0。
+- Ledger、FeeTable、FabricWorld 的健康在新增入口后仍正常。共享 server-operations 与 FabricWorld 恢复端口文档已更新、提交推送，并同步校验服务器副本。
+- 正式测试只使用隔离合成数据；公网验收只读，正式库保持空白供家庭使用。
