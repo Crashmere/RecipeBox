@@ -11,7 +11,8 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true
 ProtectSystem=strict
-ReadWritePaths=/opt/recipebox/data /opt/recipebox/backups
+# data 与 backups 必须在同一个挂载点，照片硬链接才能跨目录；其余内容归 root，应用用户仍不可写。
+ReadWritePaths=/opt/recipebox
 MemoryMax=256M
 CPUQuota=50%
 Nice=10
