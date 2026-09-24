@@ -85,4 +85,4 @@ vips --version
 
 缺库/损坏时查备份和权限，不能通过 init 创建空库掩盖错误。507 核对根盘/照片配额；429 核对备份锁与并发上传；422 核对图片格式与 vips 日志。libvips 8.15/8.18 共用 `--export-profile=srgb`。
 
-文档从已推送提交 `git archive` 白名单导出，更新 docs/SOURCE；共享清单独立同步 agent-config，不能把本机 .local 或整个未跟踪 docs 目录上传。
+文档提交推送后运行 `~/agent-config/skills/server-operations/scripts/sync-docs.sh RecipeBox`，它负责漂移检查、安装到 /opt/recipebox、逐文件校验、docs/SOURCE 和清理（用法见 server-operations 的 maintenance）。共享清单改动后不带参数运行同一脚本。
