@@ -10,4 +10,6 @@ Deploy RecipeBox 是手动 workflow_dispatch，只允许 main，发送前核对 
 
 部署材料、配置和文档由管理员从已推送提交同步。普通发布只更新二进制/current-commit，不能改 unit、Nginx、部署脚本、文档。发布历史与发布前备份暂人工保留。
 
+Deploy RecipeBox 的 SSH 步骤以 exit code 124 结束、最新发布目录为 failed 且没有 metadata，是 GitHub runner 到服务器的上传超时。不要反复重跑，直接按共享的 [GitHub 上传过慢时的备用发布](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#github-上传过慢时的备用发布)处理（服务器副本 `/opt/server-context/references/common-issues.md`），其中也包括残留清理。RecipeBox 的参数：发布工作流不上传产物，改用同一提交成功的 Build and verify run 的 artifact `recipebox-linux`（文件 `recipebox-linux-amd64`），验收 `/recipebox/healthz` 与 `/recipebox/new`，不写测试数据。
+
 `deploy/test-release.sh` 在 Linux 隔离临时目录使用模拟 systemctl/curl/runuser 验证校验和失败、候选 check 失败、启动健康失败恢复、成功提交；不在生产实例制造故障。
