@@ -50,7 +50,7 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright" npm --prefix web run test:e2e
 
 ## 备份与恢复
 
-每天 Asia/Shanghai 03:45 加 0–5 分钟随机延迟，保留 14 份 daily。备份 SQLite 一致性快照、图片硬链接和 SHA-256 清单。before-deploy / manual 不自动轮换；尚无异机备份。
+每天 Asia/Shanghai 03:45 加 0–5 分钟随机延迟，保留 14 份 daily。**当前定时备份自 2026-09-20 起失败**（`invalid cross-device link`），原因与修复见共享的 [systemd 沙箱下照片硬链接备份失败](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#systemd-沙箱下照片硬链接备份失败)，修复后删除本句。备份 SQLite 一致性快照、图片硬链接和 SHA-256 清单。before-deploy / manual 不自动轮换；尚无异机备份。
 
 ```sh
 systemctl status recipebox-backup.timer
