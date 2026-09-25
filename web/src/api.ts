@@ -15,12 +15,16 @@ export class ApiError extends Error {
     super(message);
   }
 }
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+export async function api<T>(
+  path: string,
+  init?: RequestInit,
+  timeout = 120000,
+): Promise<T> {
   let r: Response;
   try {
     r = await fetch(base + "api/" + path, {
       ...init,
-      signal: AbortSignal.timeout(120000),
+      signal: AbortSignal.timeout(timeout),
     });
   } catch {
     throw new ApiError("网络连接中断，输入已保留。请检查网络后重试。", 0);
@@ -76,12 +80,19 @@ export async function write(id: string, data: unknown): Promise<Entry> {
   }
   const key = previous?.body === body ? previous.key : uid();
   persist(storage, { body, key });
+  let done = false;
   try {
-    const result = await api<Entry>(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": key },
-      body,
-    });
+    const result = await Promise.race([
+      api<Entry>(path, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": key,
+        },
+        body,
+      }),
+      committed(key, () => done),
+    ]);
     forget(storage);
     return result;
   } catch (e) {
@@ -89,6 +100,20 @@ export async function write(id: string, data: unknown): Promise<Entry> {
       forget(storage);
     }
     throw e;
+  } finally {
+    done = true;
+  }
+}
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// The network can lose a response after the server has committed; the
+// operation lookup ends the wait without resubmitting.
+async function committed(key: string, done: () => boolean): Promise<Entry> {
+  for (;;) {
+    await sleep(3000);
+    if (done()) return new Promise<Entry>(() => {});
+    try {
+      return await api<Entry>("operations/" + key, undefined, 5000);
+    } catch {}
   }
 }
 export const message = ref("");

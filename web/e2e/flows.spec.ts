@@ -158,6 +158,32 @@ test("lost response recovers on reload without duplicate recipe", async ({
   const items = await (await request.get("api/records")).json();
   expect(items.filter((e: any) => e.name === name)).toHaveLength(1);
 });
+test("stalled cook log response finishes from the committed result", async ({
+  page,
+  request,
+}) => {
+  const name = "日记响应卡住 " + Date.now();
+  const created = await (
+    await request.post("api/records", {
+      headers: { "Idempotency-Key": crypto.randomUUID().replace(/-/g, "") },
+      data: { kind: "recipe", name },
+    })
+  ).json();
+  await page.goto("recipes/" + created.id);
+  await page.route("**/api/records/" + created.id, async (route) => {
+    if (route.request().method() === "POST") await route.fetch();
+    else await route.continue();
+  });
+  await page.getByRole("button", { name: "记一次下厨", exact: true }).click();
+  await page.getByLabel("下厨心得").fill("响应丢了也能记下。");
+  await page.getByRole("button", { name: "保存这次下厨" }).click();
+  await expect(
+    page.getByText("响应丢了也能记下。", { exact: true }),
+  ).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const saved = await (await request.get("api/records/" + created.id)).json();
+  expect(saved.logs).toHaveLength(1);
+});
 test("conflict keeps input and can compare latest content", async ({
   page,
   request,

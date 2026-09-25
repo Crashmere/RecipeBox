@@ -57,13 +57,13 @@ func TestRecordsRevisionsAndIdempotency(t *testing.T) {
 	ctx := context.Background()
 	in := WriteInput{Record: Record{Name: "番茄炒蛋", Kind: "recipe", Ingredients: []Ingredient{{"番茄", "2个"}, {"", ""}}, Steps: []string{"切番茄", "", "炒蛋"}}}
 	key := ID()
-	a, e := s.Write(ctx, "", key, "same", in)
-	if e != nil {
-		t.Fatal(e)
+	a, replayed, e := s.write(ctx, "", key, "same", in)
+	if e != nil || replayed {
+		t.Fatal(replayed, e)
 	}
-	b, e := s.Write(ctx, "", key, "same", in)
-	if e != nil || !bytes.Equal(a, b) {
-		t.Fatalf("replay %s %v", b, e)
+	b, replayed, e := s.write(ctx, "", key, "same", in)
+	if e != nil || !replayed || !bytes.Equal(a, b) {
+		t.Fatalf("replay %t %s %v", replayed, b, e)
 	}
 	_, e = s.Write(ctx, "", key, "different", in)
 	assertStatus(t, e, 409)

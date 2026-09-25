@@ -3,6 +3,7 @@ package app
 import (
 	"archive/zip"
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func jsonResponse(w http.ResponseWriter, status int, v any) {
@@ -75,6 +77,7 @@ func (s *Store) Handler(assets fs.FS) http.Handler {
 		return e
 	})
 	write := func(w http.ResponseWriter, r *http.Request) error {
+		start := time.Now()
 		b, e := io.ReadAll(http.MaxBytesReader(w, r.Body, 256<<10))
 		if e != nil {
 			return fail(413, "size", "表单内容过大")
@@ -89,7 +92,15 @@ func (s *Store) Handler(assets fs.FS) http.Handler {
 		if d.Decode(&extra) != io.EOF {
 			return fail(400, "json", "表单格式不正确")
 		}
-		out, e := s.Write(r.Context(), r.PathValue("id"), r.Header.Get("Idempotency-Key"), fingerprint(r.Method, r.URL.Path, b), in)
+		out, replayed, e := s.write(r.Context(), r.PathValue("id"), r.Header.Get("Idempotency-Key"), fingerprint(r.Method, r.URL.Path, b), in)
+		status := 200
+		var p *Problem
+		if errors.As(e, &p) {
+			status = p.Status
+		} else if e != nil {
+			status = 500
+		}
+		log.Printf("write %s action=%s status=%d replay=%t %s", r.URL.Path, cmp.Or(in.Action, "save"), status, replayed, time.Since(start).Round(time.Microsecond))
 		if e == nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write(out)

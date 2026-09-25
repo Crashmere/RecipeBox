@@ -132,17 +132,26 @@ func replay(ctx context.Context, tx *sql.Tx, key, fp string) ([]byte, error) {
 	return []byte(b), nil
 }
 func (s *Store) Write(ctx context.Context, id, key, fp string, in WriteInput) ([]byte, error) {
+	b, _, e := s.write(ctx, id, key, fp, in)
+	return b, e
+}
+func (s *Store) write(ctx context.Context, id, key, fp string, in WriteInput) ([]byte, bool, error) {
 	if !idPattern.MatchString(key) {
-		return nil, fail(400, "key", "缺少有效提交编号")
+		return nil, false, fail(400, "key", "缺少有效提交编号")
 	}
 	tx, e := s.DB.BeginTx(ctx, nil)
 	if e != nil {
-		return nil, e
+		return nil, false, e
 	}
 	defer tx.Rollback()
 	if cached, e := replay(ctx, tx, key, fp); cached != nil || e != nil {
-		return cached, e
+		return cached, cached != nil, e
 	}
+	b, e := apply(ctx, tx, id, key, fp, in)
+	return b, false, e
+}
+func apply(ctx context.Context, tx *sql.Tx, id, key, fp string, in WriteInput) ([]byte, error) {
+	var e error
 	r := Record{ID: ID(), Kind: in.Kind, CreatedAt: now(), Logs: []CookLog{}}
 	action := in.Action
 	if action == "" {

@@ -21,4 +21,4 @@
 
 记录包含 id/kind/revision/name/category/notes/tags/ingredients/steps/minutes/servings/favorite/logs/photoIds/quantity/unit/location/purchaseDate/expiryDate/createdAt/updatedAt/deletedAt。标准定义见 internal/app/model.go 与 web/src/types.ts。
 
-错误 JSON={code,message}：400 格式/提交号；403 来源；404 缺失；409 版本冲突、复用键或无库存；410 回收期过期；413 超量；415 格式；422 内容验证/图片解码；429 繁忙/限速；507 容量。每 IP 每分钟写操作 120，上传单独 30（仅接受 loopback 代理传来的 X-Real-IP）。未返回响应不表示未提交，必须查询原 key 或原字节重试。操作结果最多保留 7 天，不应自动重试更早的未知提交。
+错误 JSON={code,message}：400 格式/提交号；403 来源；404 缺失；409 版本冲突、复用键或无库存；410 回收期过期；413 超量；415 格式；422 内容验证/图片解码；429 繁忙/限速；507 容量。每 IP 每分钟写操作 120，上传单独 30（仅接受 loopback 代理传来的 X-Real-IP）。未返回响应不表示未提交，必须查询原 key 或原字节重试；网页在写入 3 秒无回复后自动查询原 key。操作结果最多保留 7 天，不应自动重试更早的未知提交。

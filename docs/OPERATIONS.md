@@ -83,6 +83,12 @@ du -sh /opt/recipebox/data /opt/recipebox/backups
 vips --version
 ```
 
+每次记录写入在 journal 记一行 `write <路径> action=… status=… replay=… <服务端耗时>`，不含表单内容；格式、JSON 错误在解析阶段拒绝，不记录。保存慢时，先按时间核对这一行：耗时仅几毫秒且随后出现 `replay=true`，说明服务端已写入，是响应在网络上丢失或延迟后同一请求再次到达；共享 Nginx 访问日志的时间是请求结束时间，不含耗时。
+
+```sh
+journalctl -u recipebox --since '-1h' --no-pager | grep ' write '
+```
+
 缺库/损坏时查备份和权限，不能通过 init 创建空库掩盖错误。507 核对根盘/照片配额；429 核对备份锁与并发上传；422 核对图片格式与 vips 日志。libvips 8.15/8.18 共用 `--export-profile=srgb`。
 
 文档提交推送后运行 `~/agent-config/skills/server-operations/scripts/sync-docs.sh RecipeBox`，它负责漂移检查、安装到 /opt/recipebox、逐文件校验、docs/SOURCE 和清理（用法见 server-operations 的 maintenance）。共享清单改动后不带参数运行同一脚本。
