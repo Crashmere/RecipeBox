@@ -1,0 +1,91 @@
+name: CI and deploy
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+# 同一分支顺序完成检查和发布，避免旧发布覆盖后来的提交。
+concurrency:
+  group: recipebox-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install image tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips-tools libheif-plugin-libde265
+      - run: npm --prefix web ci && npm --prefix web run build
+      - run: go test -race ./... && go vet ./... && npm --prefix web test
+      - run: for script in deploy/*.sh; do bash -n "$script"; done
+      - run: bash deploy/test-release.sh
+      - run: go build -trimpath -o bin/recipebox ./cmd/recipebox
+      - name: Browser flows
+        run: |
+          mkdir -p .local
+          bin/recipebox init --data .local/e2e-data
+          bin/recipebox serve --data .local/e2e-data --with-prefix &
+          cd web
+          npx playwright install --with-deps chromium webkit
+          PW_CHANNEL=chromium npm run test:e2e
+      - run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o bin/recipebox-linux-amd64 ./cmd/recipebox
+      - name: Save deployable binary
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: recipebox-linux
+          path: bin/recipebox-linux-amd64
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: recipebox-linux
+          path: artifact
+      - name: Deploy using restricted identity
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          DEPLOY_COMMIT: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          latest=$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq '.object.sha')
+          if [[ "$latest" != "$DEPLOY_COMMIT" ]]; then
+            echo 'A newer main commit exists; skip this stale deployment.'
+            exit 0
+          fi
+          credentials=$(mktemp -d "$RUNNER_TEMP/recipebox-ssh.XXXXXX")
+          trap 'rm -f "$credentials/key" "$credentials/known_hosts"; rmdir "$credentials"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$credentials/key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$credentials/known_hosts"
+          chmod 600 "$credentials/key" "$credentials/known_hosts"
+          digest=$(sha256sum artifact/recipebox-linux-amd64 | cut -d ' ' -f 1)
+          ssh -T -i "$credentials/key" -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$credentials/known_hosts" \
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            "$SSH_USER@$SSH_HOST" "deploy $DEPLOY_COMMIT $digest" < artifact/recipebox-linux-amd64
+          curl --fail --silent --show-error --max-time 15 "http://$SSH_HOST/recipebox/healthz"
