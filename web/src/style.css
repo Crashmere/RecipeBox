@@ -695,6 +695,9 @@ input[type="checkbox"] {
 .field:last-child {
   margin-bottom: 0;
 }
+.form-grid > .field:last-child {
+  margin-bottom: 20px;
+}
 .field input,
 .field textarea,
 .field .date-input {
@@ -826,6 +829,10 @@ input[type="checkbox"] {
 }
 .photo-field .photo-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.story-input {
+  display: block;
+  font-size: 14px;
 }
 .upload-zone {
   border: 1.5px dashed #d8d1bf;
@@ -2050,6 +2057,7 @@ input[type="checkbox"] {
   .field textarea,
   .ingredient-edit input,
   .step-edit textarea,
+  .story-input,
   .tag-input input,
   .date-input input,
   .search input {
@@ -2074,7 +2082,8 @@ input[type="checkbox"] {
   .ingredient-edit input {
     padding: 11px 9px;
   }
-  .photo-grid {
+  .photo-grid,
+  .photo-field .photo-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .save-bar {

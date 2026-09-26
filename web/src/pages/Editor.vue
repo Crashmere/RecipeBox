@@ -475,6 +475,21 @@ async function compareLatest() {
             </div>
             <Photos v-model="entry.photoIds" @busy="photosBusy = $event" />
           </section>
+          <section v-else class="panel">
+            <div class="section-heading">
+              <Icon name="edit" />
+              <h2 id="story-heading">这道菜的小故事</h2>
+              <span>选填</span>
+            </div>
+            <textarea
+              v-model="entry.notes"
+              class="story-input"
+              rows="5"
+              maxlength="10000"
+              aria-labelledby="story-heading"
+              placeholder="是谁的拿手菜？有什么小诀窍？"
+            />
+          </section>
           <div class="handwritten-note">
             <Icon name="leaf" :size="24" />
             <p>
@@ -555,9 +570,9 @@ async function compareLatest() {
               · {{ staleDraft.servings }} 人份</template
             >
           </p>
+          <p>{{ staleDraft.notes || "未填写备注" }}</p>
           <template v-if="staleDraft.kind === 'pantry'"
-            ><p>{{ staleDraft.notes || "未填写备注" }}</p>
-            <p>数量：{{ staleDraft.quantity }} {{ staleDraft.unit }}</p>
+            ><p>数量：{{ staleDraft.quantity }} {{ staleDraft.unit }}</p>
             <p>位置：{{ staleDraft.location || "未填写" }}</p>
             <p>
               购买日期：{{ staleDraft.purchaseDate || "未填写" }} · 到期：{{
