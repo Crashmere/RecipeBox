@@ -814,6 +814,19 @@ input[type="checkbox"] {
 .step-edit textarea {
   font-size: 14px;
 }
+.photo-field {
+  margin-bottom: 20px;
+}
+.photo-field > span {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.7;
+  margin-bottom: 8px;
+}
+.photo-field .photo-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .upload-zone {
   border: 1.5px dashed #d8d1bf;
   background: #f7f3e9;

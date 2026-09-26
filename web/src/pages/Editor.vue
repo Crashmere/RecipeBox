@@ -320,21 +320,25 @@ async function compareLatest() {
                       type="date"
                       v-model="entry.expiryDate"
                       :min="entry.purchaseDate || undefined" /></span
-                ></label></div></template
-            ><label class="field"
-              >{{ isPantry ? "备注" : "这道菜的小故事"
-              }}<textarea
-                v-model="entry.notes"
-                rows="3"
-                maxlength="10000"
-                :placeholder="
-                  isPantry
-                    ? '口味、开封提醒、购买链接…'
-                    : '是谁的拿手菜？有什么小诀窍？'
-                "
-              /></label
-            ><template v-if="!isPantry"
-              ><label class="field"
+                ></label>
+              </div>
+              <label class="field"
+                >备注<textarea
+                  v-model="entry.notes"
+                  rows="3"
+                  maxlength="10000"
+                  placeholder="口味、开封提醒、购买链接…"
+                /></label></template
+            ><template v-else
+              ><div
+                class="photo-field"
+                role="group"
+                aria-labelledby="photo-field-label"
+              >
+                <span id="photo-field-label">美味留影</span>
+                <Photos v-model="entry.photoIds" @busy="photosBusy = $event" />
+              </div>
+              <label class="field"
                 >标签
                 <div class="tag-input">
                   <input
@@ -463,10 +467,10 @@ async function compareLatest() {
           </section>
         </div>
         <aside class="editor-side">
-          <section class="panel">
+          <section v-if="isPantry" class="panel">
             <div class="section-heading">
               <Icon name="camera" />
-              <h2>{{ isPantry ? "食品照片" : "美味留影" }}</h2>
+              <h2>食品照片</h2>
               <span>选填</span>
             </div>
             <Photos v-model="entry.photoIds" @busy="photosBusy = $event" />
@@ -551,9 +555,9 @@ async function compareLatest() {
               · {{ staleDraft.servings }} 人份</template
             >
           </p>
-          <p>{{ staleDraft.notes || "未填写备注" }}</p>
           <template v-if="staleDraft.kind === 'pantry'"
-            ><p>数量：{{ staleDraft.quantity }} {{ staleDraft.unit }}</p>
+            ><p>{{ staleDraft.notes || "未填写备注" }}</p>
+            <p>数量：{{ staleDraft.quantity }} {{ staleDraft.unit }}</p>
             <p>位置：{{ staleDraft.location || "未填写" }}</p>
             <p>
               购买日期：{{ staleDraft.purchaseDate || "未填写" }} · 到期：{{
