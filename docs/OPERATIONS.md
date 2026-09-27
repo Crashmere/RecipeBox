@@ -52,7 +52,7 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/playwright" npm --prefix web run test:e2e
 
 ## 备份与恢复
 
-每天 Asia/Shanghai 03:45 加 0–5 分钟随机延迟，保留 14 份 daily。备份 unit 的可写目录必须是整个 /opt/recipebox，原因见共享的 [systemd 沙箱下照片硬链接备份失败](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#systemd-沙箱下照片硬链接备份失败)。备份 SQLite 一致性快照、图片硬链接和 SHA-256 清单。before-deploy / manual 不自动轮换；尚无异机备份。
+每天 Asia/Shanghai 03:45 加 0–5 分钟随机延迟，保留 14 份 daily。备份 unit 的可写目录必须是整个 /opt/recipebox，原因见共享的 [systemd 沙箱下照片硬链接备份失败](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#systemd-沙箱下照片硬链接备份失败)。备份 SQLite 一致性快照、图片硬链接和 SHA-256 清单。before-deploy / manual 不自动轮换；2026-09-27 已另取包含本项目数据库和照片的全应用归档，下载到维护电脑并校验，见 [共享备份说明](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md#手工数据归档)。当前没有自动异机同步。
 
 ```sh
 systemctl status recipebox-backup.timer
