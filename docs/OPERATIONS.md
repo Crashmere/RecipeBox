@@ -94,3 +94,9 @@ journalctl -u recipebox --since '-1h' --no-pager | grep ' write '
 缺库/损坏时查备份和权限，不能通过 init 创建空库掩盖错误。507 核对根盘/照片配额；429 核对备份锁与并发上传；422 核对图片格式与 vips 日志。libvips 8.15/8.18 共用 `--export-profile=srgb`。
 
 文档提交推送后运行 `~/agent-config/skills/server-operations/scripts/sync-docs.sh RecipeBox`，它负责漂移检查、安装到 /opt/recipebox、逐文件校验、docs/SOURCE 和清理（用法见 server-operations 的 maintenance）。共享清单改动后不带参数运行同一脚本。
+
+## ServerPortal 接入材料
+
+已在源码登记 `deploy/portal.json`，待门户上线时安装到本项目 config 目录。声明包含真实目录用途、只读浏览权限、数据库、API、端口、unit 与原生 backup 契约。生产目前仍以本文开头和共享 current-state 的访问方式为准；本次只增加接入材料，没有切换认证或执行清理。
+
+维护数据根、媒体、备份格式、unit、端口或路径时，同时修改声明和对应文档；安装后通过门户核对资源覆盖与隔离恢复。ServerPortal 的加密整机材料备份覆盖本项目当前数据、配置、程序、文档、发布身份公钥及可选历史备份/版本；不得以复制活动 WAL 主文件代替本项目原生 backup。统一认证启用后，公网页面和接口由设备凭据保护，本机发布检查仍保留。

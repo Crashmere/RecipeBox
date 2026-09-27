@@ -1,0 +1,146 @@
+{
+  "id": "recipebox",
+  "name": "RecipeBox",
+  "description": "家庭菜谱、常备食材与下厨日记。",
+  "icon": "/portal/static/icons/recipebox.png",
+  "url": "/recipebox/",
+  "repo": "https://github.com/Crashmere/RecipeBox",
+  "root": "/opt/recipebox",
+  "port": 18083,
+  "user": "recipebox",
+  "units": [
+    "recipebox.service",
+    "recipebox-backup.service",
+    "recipebox-backup.timer"
+  ],
+  "database": "/opt/recipebox/data/recipebox.db",
+  "backupKind": "media",
+  "resources": [
+    {
+      "id": "data",
+      "name": "业务数据",
+      "path": "/opt/recipebox/data",
+      "purpose": "数据库、图片与历史迁移材料；临时文件不属于恢复数据。",
+      "kind": "data",
+      "browse": true,
+      "cleanup": false
+    },
+    {
+      "id": "backups",
+      "name": "数据备份",
+      "path": "/opt/recipebox/backups",
+      "purpose": "daily、manual 与 before-deploy 一致性快照。",
+      "kind": "backups",
+      "browse": true,
+      "cleanup": true
+    },
+    {
+      "id": "releases",
+      "name": "部署版本",
+      "path": "/opt/recipebox/releases",
+      "purpose": "程序、发布结果与 previous 回退材料。",
+      "kind": "releases",
+      "browse": true,
+      "cleanup": true
+    },
+    {
+      "id": "config",
+      "name": "运行配置",
+      "path": "/opt/recipebox/config",
+      "purpose": "环境配置、systemd、Nginx 与资源声明；不直接展示秘密。",
+      "kind": "config",
+      "browse": false,
+      "cleanup": false
+    },
+    {
+      "id": "bin",
+      "name": "服务程序",
+      "path": "/opt/recipebox/bin",
+      "purpose": "当前应用程序及固定维护/发布脚本。",
+      "kind": "binaries",
+      "browse": false,
+      "cleanup": false
+    },
+    {
+      "id": "docs",
+      "name": "维护文档",
+      "path": "/opt/recipebox/docs",
+      "purpose": "架构、API、运维与恢复说明。",
+      "kind": "documents",
+      "browse": true,
+      "cleanup": false
+    }
+  ],
+  "apis": [
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "description": "数据库连接健康"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records",
+      "description": "当前记录数组；trash=1 取回收站"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/:id",
+      "description": "单个记录，包含 deletedAt"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records",
+      "description": "创建，kind=recipe/pantry、name 必填"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/:id",
+      "description": "默认 save，全量资料（服务端保留下厨日记）"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/:id",
+      "description": "更新 favorite 布尔值"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/:id",
+      "description": "食品数量减一"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/:id",
+      "description": "log={id?,date,note,rating}；无 id 新增，有 id 修改"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/:id",
+      "description": "log.id 指定删除的日记"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/:id",
+      "description": "回收站动作"
+    },
+    {
+      "method": "GET",
+      "path": "/api/operations/:key",
+      "description": "取得已提交的原结果，未知返回 404"
+    },
+    {
+      "method": "POST",
+      "path": "/api/uploads",
+      "description": "原始文件 body，返回 media 元信息"
+    },
+    {
+      "method": "GET",
+      "path": "/api/media/:id/main",
+      "description": "标准 JPEG 或 WebP，核对归属/过期/删除"
+    },
+    {
+      "method": "GET",
+      "path": "/api/export",
+      "description": "ZIP，recipes-and-pantry.json 与 photos/:id.jpg"
+    }
+  ]
+}
