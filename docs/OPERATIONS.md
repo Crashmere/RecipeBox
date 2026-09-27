@@ -97,6 +97,12 @@ journalctl -u recipebox --since '-1h' --no-pager | grep ' write '
 
 ## ServerPortal 接入材料
 
-`deploy/portal.json` 已安装到本项目 config 目录，由 root 管理。声明包含目录用途、只读浏览权限、数据库、API、端口、unit 与原生 backup 契约。门户 /portal/ 已上线并统一保护公网访问；没有执行生产数据或历史备份清理。
+`deploy/portal.json` 是本应用资源说明的维护源。CI 使用固定提交的 server-operations 校验器检查，再将同一声明与二进制一同保存为 artifact；发布前执行 `portal-check`，发布后执行 `portal`，通过现有受限 SSH 安装到 `/opt/recipebox/config/portal.json` 并核对采集器实际加载的 SHA-256。`config/portal-source.json` 记录声明来源提交；它与程序的 current-commit 各自表示不同材料的版本。
 
-维护数据根、媒体、备份格式、unit、端口或路径时，同时修改声明和对应文档；安装后通过门户核对资源覆盖与隔离恢复。ServerPortal 的加密整机材料备份覆盖本项目当前数据、配置、程序、文档、发布身份公钥及可选历史备份/版本；不得以复制活动 WAL 主文件代替本项目原生 backup。公网页面和接口已由统一设备凭据保护，本机发布检查仍保留。
+门户从 `/opt/serverportal/registry.d/recipebox.json` 的受控链接发现本应用，声明成功更新后自动加载，无需重启。首次正常 CI 发布也会建立链接，无需再编辑门户中央应用列表。普通发布可更新本应用的声明，其他 unit/env/Nginx/发布脚本仍由管理员安装。
+
+只改门户名称、目录用途、API 说明等元数据时，在 main 上手动运行 CI and deploy，设置 `portal_only=true`；仍执行验证与声明生效检查，但不替换程序、不停止业务服务、不创建发布前数据快照。源码或数据库行为变更不能使用该选项代替程序发布。
+
+数据根、媒体、备份格式、unit、端口或访问路径变化时，同一提交维护声明及对应文档，更新共享清单并核对资源覆盖。文件、媒体、数据库表和 systemd 状态由门户自动读取；目录用途、API 说明和权限边界须由维护 agent 明确更新。共同协议、失败处置与新应用接入见 [门户维护](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/portal.md)。
+
+门户 /portal/ 已统一保护公网访问，发布脚本通过回环检查应用健康，CI 公网检查预期未授权返回 401。门户备份使用本应用原生一致性快照；真实完整链恢复验收按用户要求暂缓，不因本次维护自动继续下载或恢复。

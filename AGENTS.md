@@ -15,6 +15,6 @@
 ## 门户资源同步
 
 - 本项目的 `deploy/portal.json` 是 ServerPortal 资源声明的维护源，记录目录用途、数据库、运行用户、端口、unit、访问路径、API 与备份类型。新增/迁移/删除数据根、接口或运行材料时，必须同步修改声明、对应 docs 与共享应用清单。
-- 声明部署在 `/opt/recipebox/config/portal.json`，root 管理；普通 CI 不自动安装配置。维护安装后重启门户采集进程并核对目录、只读数据表、备份覆盖与未知资源提示。
+- 声明部署在 `/opt/recipebox/config/portal.json`，root 管理；CI 共用 server-operations 校验器，发布前预检，发布后通过受限 SSH 自动同步并核对门户加载哈希。`registry.d/recipebox.json` 自动登记链接，更新无需重启门户。只修改门户信息时可手动运行 CI 的 `portal_only=true`，保留业务运行版本。
 - 统一认证由共享 Nginx 与门户负责，不在本项目另存设备白名单；本机调用和发布健康检查按共享约定保留。生产已启用设备认证；变更后同步 server-operations current-state。
 - 门户只读展示不替代本项目原生一致性备份；备份格式或媒体生命周期变化必须同时验证门户全量/增量与离线恢复。真实业务数据、凭据和备份仍不得进入 Git。

@@ -2,6 +2,15 @@
 set -euo pipefail
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 umask 077
+
+# The deployment identity may publish only this application's bounded declaration.
+# All validation and atomic publication logic belongs to ServerPortal/server-operations.
+if [[ $EUID -eq 0 && $# -eq 3 && ( $1 == portal || $1 == portal-check ) && $2 =~ ^[0-9a-f]{40}$ && $3 =~ ^[0-9a-f]{64}$ ]]; then
+  portal_action=register
+  if [[ $1 == portal-check ]]; then portal_action=check-registration; fi
+  exec timeout 45 /opt/serverportal/bin/portal "$portal_action" --app recipebox --commit "$2" --sha256 "$3"
+fi
+
 if [[ $EUID -ne 0 || $# -ne 2 || ! $1 =~ ^[0-9a-f]{40}$ || ! $2 =~ ^[0-9a-f]{64}$ ]]; then echo 'Usage: deploy-release.sh <commit> <sha256> < binary' >&2; exit 64; fi
 commit=$1
 expected=$2

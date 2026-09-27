@@ -4,6 +4,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      portal_only:
+        description: 'Publish portal metadata without restarting the application'
+        type: boolean
+        default: false
 permissions:
   contents: read
 # 同一分支顺序完成检查和发布，避免旧发布覆盖后来的提交。
@@ -18,6 +23,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Load shared portal contract
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Crashmere/agent-config
+          ref: ed573ed30f559cd2024a4b71447b8fbd1c847f50
+          path: .portal-contract
+          persist-credentials: false
+      - name: Validate portal declaration and restricted deployment protocol
+        run: |
+          python3 .portal-contract/skills/server-operations/scripts/validate-portal.py --app recipebox --file deploy/portal.json
+          python3 .portal-contract/skills/server-operations/scripts/test-portal-deploy.py --app recipebox --directory deploy
+          mkdir -p bin
+          cp deploy/portal.json bin/portal.json
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
           go-version-file: go.mod
@@ -47,7 +65,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: recipebox-linux
-          path: bin/recipebox-linux-amd64
+          path: |
+            bin/recipebox-linux-amd64
+            bin/portal.json
           if-no-files-found: error
           retention-days: 7
 
@@ -69,6 +89,7 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
           DEPLOY_COMMIT: ${{ github.sha }}
+          PORTAL_ONLY: ${{ inputs.portal_only || false }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
@@ -83,9 +104,21 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$credentials/key"
           printf '%s\n' "$SSH_KNOWN_HOSTS" > "$credentials/known_hosts"
           chmod 600 "$credentials/key" "$credentials/known_hosts"
-          digest=$(sha256sum artifact/recipebox-linux-amd64 | cut -d ' ' -f 1)
-          ssh -T -i "$credentials/key" -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 \
-            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$credentials/known_hosts" \
-            -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
-            "$SSH_USER@$SSH_HOST" "deploy $DEPLOY_COMMIT $digest" < artifact/recipebox-linux-amd64
-          curl --fail --silent --show-error --location --proto-redir =https --max-time 15 "http://$SSH_HOST/recipebox/healthz"
+          portal_digest=$(sha256sum artifact/portal.json | cut -d ' ' -f 1)
+          portal_ssh() {
+            ssh -T -i "$credentials/key" -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 \
+              -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$credentials/known_hosts" \
+              -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+              "$SSH_USER@$SSH_HOST" "$1 $DEPLOY_COMMIT $portal_digest" < artifact/portal.json
+          }
+          portal_ssh portal-check
+          if [[ "$PORTAL_ONLY" != true ]]; then
+            digest=$(sha256sum artifact/recipebox-linux-amd64 | cut -d ' ' -f 1)
+            ssh -T -i "$credentials/key" -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 \
+              -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$credentials/known_hosts" \
+              -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+              "$SSH_USER@$SSH_HOST" "deploy $DEPLOY_COMMIT $digest" < artifact/recipebox-linux-amd64
+          fi
+          portal_ssh portal
+          status=$(curl --silent --show-error --proto '=https' --max-time 15 -o /dev/null -w '%{http_code}' "https://$SSH_HOST/recipebox/healthz")
+          [[ "$status" == 401 ]] || { echo "Expected device authentication (401), got $status" >&2; exit 1; }
