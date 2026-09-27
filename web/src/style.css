@@ -127,6 +127,9 @@ input[type="checkbox"] {
   accent-color: var(--red);
 }
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   background: #fffefa;
   border-bottom: 1px solid var(--line);
 }
@@ -2156,6 +2159,7 @@ input[type="checkbox"] {
 }
 
 html {
+  scroll-padding-top: 104px;
   scroll-padding-bottom: 170px;
 }
 .field,

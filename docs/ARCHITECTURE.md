@@ -28,6 +28,8 @@ SQLite application_id=1380077378，user_version=1，WAL + FULL synchronous、外
 
 ## 浏览器交互
 
+全站页头使用 `sticky; top: 0` 和不透明背景，滚动时品牌与更多菜单留在顶部；根滚动区预留 104px 顶部定位空间，原有底部导航和保存区继续保留滚动余量。手机视口采用浏览器默认安全区布局，不启用 `viewport-fit=cover`；原因和真机验证边界见 [顶部安全区说明](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#iphone-主屏幕页面顶部发虚)。
+
 暖白/番茄红，原创 SVG 菜谱餐盘图标和厨房插画，无外部字体或图片请求。ICO 16/32/48 px、Apple Touch 180 px 由 npm run icons 生成，使用现有 libvips。BASE_URL 为 /recipebox/，深链接刷新由后端回落 index.html。
 
 菜谱照片位于基本信息内、人数之后，“这道菜的小故事”在侧栏，手机上排在做法之后；食品照片在侧栏，手机上排在基本信息之后。缩略图在 480 px 以下两列。网格中单独成行的字段保留下边距。食材名称、用量、移除按钮分列，步骤排序独占一行，日期在窄屏独占一行。原生 date 的边框/内边距放到外层，防止 WebKit 宽度异常。输入字体 16 px；保存条与底部导航、safe-area 错开，表单滚动留出控件空间。dialog 使用原生焦点限制、Escape、返回焦点。图片上传有进度、失败重试和移除，未上传成功时禁止保存。
