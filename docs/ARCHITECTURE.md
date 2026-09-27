@@ -1,6 +1,6 @@
 # 架构与业务规则
 
-浏览器 → Nginx `/recipebox/` → Go `127.0.0.1:18083` → SQLite 与本地照片。Vue 3 / TypeScript / Vite 页面内嵌 Go 程序，生产不需要 Node。用户明确授权无登录共享读写，不存在账户或角色。
+浏览器 → Nginx `/recipebox/` → Go `127.0.0.1:18083` → SQLite 与本地照片。Vue 3 / TypeScript / Vite 页面内嵌 Go 程序，生产不需要 Node。公网通过 ServerPortal 统一设备认证后共享读写，应用内不区分账户或角色。
 
 ## 菜谱与常备食品
 
