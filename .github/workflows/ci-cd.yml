@@ -88,4 +88,4 @@ jobs:
             -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$credentials/known_hosts" \
             -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
             "$SSH_USER@$SSH_HOST" "deploy $DEPLOY_COMMIT $digest" < artifact/recipebox-linux-amd64
-          curl --fail --silent --show-error --max-time 15 "http://$SSH_HOST/recipebox/healthz"
+          curl --fail --silent --show-error --location --proto-redir =https --max-time 15 "http://$SSH_HOST/recipebox/healthz"
