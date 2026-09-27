@@ -34,4 +34,4 @@ SQLite application_id=1380077378，user_version=1，WAL + FULL synchronous、外
 
 表单与已上传引用暂存 sessionStorage，24 小时内可继续；离开时确认并提示未上传 File 不能恢复。成功才清草稿，待确认保存持久化原请求和幂等键；编辑器刷新先查询原结果，成功后找回记录。所有写入 3 秒未收到回复时，每 3 秒按原幂等键查询 operations（单次 5 秒超时）；查到即按成功结束，不重发请求。原请求仍等满 120 秒，晚到的响应被忽略。多设备冲突保留草稿，提供最新记录链接与草稿对照，用户合并后再提交。sessionStorage 仅属于当前设备/标签页，不是跨设备同步或长期备份。
 
-HTTP 没有 Service Worker / getUserMedia；拍照通过 capture=environment 文件输入，请求手机系统相机，具体行为由设备决定。服务端来源检查、CSP、nosniff、请求限制和限速减少跨站/文件风险，不代替身份鉴权。
+应用不使用 Service Worker / getUserMedia；拍照通过 capture=environment 文件输入，请求手机系统相机，具体行为由设备决定。服务端来源检查、CSP、nosniff、请求限制和限速减少跨站/文件风险，不代替身份鉴权。
