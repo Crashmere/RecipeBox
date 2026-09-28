@@ -105,7 +105,7 @@ journalctl -u recipebox --since '-1h' --no-pager | grep ' write '
 
 数据根、媒体、备份格式、unit、端口或访问路径变化时，同一提交维护声明及对应文档，更新共享清单并核对资源覆盖。文件、媒体、数据库表和 systemd 状态由门户自动读取；目录用途、API 说明和权限边界须由维护 agent 明确更新。共同协议、失败处置与新应用接入见 [门户维护](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/portal.md)。
 
-门户 /portal/ 已统一保护公网访问，发布脚本通过回环检查应用健康，CI 公网检查预期未授权返回 401。门户备份使用本应用原生一致性快照；真实完整链恢复验收按用户要求暂缓，不因本次维护自动继续下载或恢复。
+门户 /portal/ 已统一保护公网访问，发布脚本通过回环检查应用健康，CI 公网检查预期未授权返回 401。设备授权永久有效至主动撤销，Cookie 经共享 Nginx 随有效请求续期；本应用若新增 add_header，必须保留共享 Set-Cookie 转发，规则及验收见共享门户维护文档。门户备份使用本应用原生一致性快照；真实完整链恢复验收按用户要求暂缓，不因本次维护自动继续下载或恢复。
 
 ## 手机桌面图标
 
