@@ -80,67 +80,47 @@
     {
       "method": "GET",
       "path": "/api/records",
-      "description": "当前记录数组；trash=1 取回收站"
+      "description": "全部未删除记录数组，不分页；查询参数 trash=1 取回收站，按 updatedAt、id 倒序"
     },
     {
       "method": "GET",
-      "path": "/api/records/:id",
-      "description": "单个记录，包含 deletedAt"
+      "path": "/api/records/{id}",
+      "description": "单个记录，包含 deletedAt，也可读取尚未清理的回收站记录"
     },
     {
       "method": "POST",
       "path": "/api/records",
-      "description": "创建，kind=recipe/pantry、name 必填"
+      "description": "创建，kind=recipe/pantry、name 必填，action 省略或为 save；返回 200 和 Record"
     },
     {
       "method": "POST",
-      "path": "/api/records/:id",
-      "description": "默认 save，全量资料（服务端保留下厨日记）"
-    },
-    {
-      "method": "POST",
-      "path": "/api/records/:id",
-      "description": "更新 favorite 布尔值"
-    },
-    {
-      "method": "POST",
-      "path": "/api/records/:id",
-      "description": "食品数量减一"
-    },
-    {
-      "method": "POST",
-      "path": "/api/records/:id",
-      "description": "log={id?,date,note,rating}；无 id 新增，有 id 修改"
-    },
-    {
-      "method": "POST",
-      "path": "/api/records/:id",
-      "description": "log.id 指定删除的日记"
-    },
-    {
-      "method": "POST",
-      "path": "/api/records/:id",
-      "description": "回收站动作"
+      "path": "/api/records/{id}",
+      "description": "body 包含当前 revision；action 为 save/favorite/consume/log/remove_log/delete/restore，成功返回 200 和完整 Record"
     },
     {
       "method": "GET",
-      "path": "/api/operations/:key",
-      "description": "取得已提交的原结果，未知返回 404"
+      "path": "/api/operations/{key}",
+      "description": "取得原记录写入或上传结果，未知返回 404，不代表资源当前最新状态"
     },
     {
       "method": "POST",
       "path": "/api/uploads",
-      "description": "原始文件 body，返回 media 元信息"
+      "description": "原始图片文件 body（非 multipart），最大 25 MiB；返回 201 和 Media"
     },
     {
       "method": "GET",
-      "path": "/api/media/:id/main",
-      "description": "标准 JPEG 或 WebP，核对归属/过期/删除"
+      "path": "/api/media/{id}/main",
+      "description": "标准 JPEG，仅有效暂存或未删除记录仍引用的照片"
+    },
+    {
+      "method": "GET",
+      "path": "/api/media/{id}/thumb",
+      "description": "WebP 缩略图，使用与 main 相同的归属和有效期检查"
     },
     {
       "method": "GET",
       "path": "/api/export",
-      "description": "ZIP，recipes-and-pantry.json 与 photos/:id.jpg"
+      "description": "全部未删除记录的 ZIP，含 recipes-and-pantry.json 与 photos/{id}.jpg，不含回收站"
     }
   ]
 }
