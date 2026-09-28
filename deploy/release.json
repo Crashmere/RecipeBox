@@ -1,0 +1,11 @@
+{
+  "app": "recipebox",
+  "build": [
+    "make",
+    "linux"
+  ],
+  "binary": "bin/recipebox-linux-amd64",
+  "portal": true,
+  "restricted": true,
+  "gzip": false
+}

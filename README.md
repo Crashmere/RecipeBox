@@ -17,7 +17,6 @@
 需要 Go（版本见 go.mod）、Node 24+、libvips；HEIC 还需 libheif 的 HEVC 解码插件。先使用合适的官方软件来源安装依赖。
 
 ```sh
-npm --prefix web ci
 make build
 mkdir -p .local
 bin/recipebox init --data .local/dev-data
@@ -26,15 +25,14 @@ bin/recipebox serve --data .local/dev-data --with-prefix
 
 打开 `http://127.0.0.1:18083/recipebox/`。首次初始化仅用于新库，已有数据直接 serve。前端热更新用 `npm --prefix web run dev`，后端去掉 --with-prefix。
 
-```sh
-make test
-npm --prefix web run test:e2e -- --project=chromium
-```
-
-项目默认使用本机 Chrome；CI 使用 Playwright Chromium。WebKit 的安装和完整检查见 [运维文档](docs/OPERATIONS.md)。
+WebKit 的安装和完整检查见 [运维文档](docs/OPERATIONS.md)。
 
 ## 部署和数据
 
 独立 Go 进程、SQLite 文件与本地照片；无需 Node 常驻或独立数据库服务。Nginx 从 `/recipebox/` 转发到 loopback，systemd 管理运行和每日备份。默认没有登录，知道网址的人拥有共同读写权限。
 
 精确的安装、备份、恢复、发布与限制见 [项目文档](docs/README.md)。正式库从空白开始，测试数据不随发布上传。当前模式联网使用，暂无离线同步和网页导入。
+
+日常发布与验证按 [本机发布说明](docs/DEPLOYMENT.md) 执行；GitHub 只作源码备份。
+
+本地开发前运行 `npm --prefix web ci` 安装锁定依赖；正式发布的 `make release` 会在隔离快照中自动安装依赖并构建。
