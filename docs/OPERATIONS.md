@@ -106,3 +106,7 @@ journalctl -u recipebox --since '-1h' --no-pager | grep ' write '
 数据根、媒体、备份格式、unit、端口或访问路径变化时，同一提交维护声明及对应文档，更新共享清单并核对资源覆盖。文件、媒体、数据库表和 systemd 状态由门户自动读取；目录用途、API 说明和权限边界须由维护 agent 明确更新。共同协议、失败处置与新应用接入见 [门户维护](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/portal.md)。
 
 门户 /portal/ 已统一保护公网访问，发布脚本通过回环检查应用健康，CI 公网检查预期未授权返回 401。门户备份使用本应用原生一致性快照；真实完整链恢复验收按用户要求暂缓，不因本次维护自动继续下载或恢复。
+
+## 手机桌面图标
+
+现有 /recipebox/apple-touch-icon.png 为 180×180；Nginx 规则仅放行它与 favicon.ico、recipebox.svg 的 GET/HEAD。页面、API 和用户媒体继续使用设备认证。共同原因、部署状态与手机验收见[共享排障记录](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#统一认证后-iphone-桌面图标缺失)。
