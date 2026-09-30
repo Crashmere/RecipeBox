@@ -7,6 +7,7 @@ import Detail from "./pages/Detail.vue";
 import Pantry from "./pages/Pantry.vue";
 import Trash from "./pages/Trash.vue";
 import "./style.css";
+import "./keyboard";
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
