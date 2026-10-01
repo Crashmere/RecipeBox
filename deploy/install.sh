@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Shared backup/cleanup lock must exist before enabling the backup timer.
+[[ -f /run/lock/ali-release-retention.lock ]] || {
+  echo 'Prepare the server-operations retention tmpfiles lock before installing this application.' >&2
+  exit 1
+}
 if [[ $EUID -ne 0 || $# -ne 1 ]]; then
   echo 'Usage: sudo bash deploy/install.sh <linux-binary>' >&2; exit 64
 fi

@@ -32,12 +32,15 @@ wait_healthy() { for ((attempt=0;attempt<20;attempt++)); do if healthy; then ret
 finish() {
   result=$?
   trap - EXIT HUP INT TERM
+  recovery_status=not-needed
   if [[ $result -ne 0 && $stopped == true ]]; then
+    recovery_status=failed
     systemctl stop recipebox || true
     if [[ $replaced == true ]]; then install -m 0755 "$release/previous" "$app/bin/recipebox.rollback"; mv -f "$app/bin/recipebox.rollback" "$app/bin/recipebox"; fi
-    if systemctl start recipebox && wait_healthy; then echo 'Previous program is healthy; database was not rolled back.' >&2;
+    if systemctl start recipebox && wait_healthy; then recovery_status=healthy; echo 'Previous program is healthy; database was not rolled back.' >&2;
     else echo 'ROLLBACK FAILED: inspect journalctl -u recipebox.' >&2; fi
   fi
+  printf '%s\n' "$recovery_status" > "$release/recovery"
   if [[ $result -eq 0 ]]; then echo success > "$release/result"; else echo failed > "$release/result"; fi
   exit "$result"
 }

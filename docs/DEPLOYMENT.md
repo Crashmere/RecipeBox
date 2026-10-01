@@ -34,4 +34,4 @@ make rollback COMMIT=<明确选择的完整旧提交>
 
 回退复用本机保留的已校验产物，仍经过备份与健康检查；先确认旧程序兼容当前数据。程序回退不恢复数据库、照片或设备状态。需要恢复数据时先选择恢复时点并保留现状，按 OPERATIONS/RESTORE 执行。
 
-服务器在 `/opt/recipebox/releases/` 保留程序、previous、metadata、result，`current-commit` 记录实际运行来源。`.local/releases/<commit>/last-deployment.json` 记录本机发布结果。上传失败通常尚未停服务；已切换后失败先看 result 和 journal。成功版本与真实备份不自动删除。
+服务器在 `/opt/recipebox/releases/` 保留程序、previous、metadata、result、recovery，`current-commit` 记录实际运行来源。`.local/releases/<commit>/last-deployment.json` 记录本机发布结果。上传失败通常尚未停服务；已切换后失败先看 result 和 journal。服务器发布历史与普通发布前快照按[发布材料自动保留](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/retention.md)自动轮换；本地构建、manual、迁移和门户导出包不参与。

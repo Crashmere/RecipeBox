@@ -42,7 +42,7 @@ bin/recipebox serve --data .local/e2e-data --with-prefix
 
 ## 备份与恢复
 
-每天 Asia/Shanghai 03:45 加 0–5 分钟随机延迟，保留 14 份 daily。备份 unit 的可写目录必须是整个 /opt/recipebox，原因见共享的 [systemd 沙箱下照片硬链接备份失败](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#systemd-沙箱下照片硬链接备份失败)。备份 SQLite 一致性快照、图片硬链接和 SHA-256 清单。before-deploy / manual 不自动轮换；2026-09-27 已另取包含本项目数据库和照片的全应用归档，下载到维护电脑并校验，见 [共享备份说明](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md#手工数据归档)。本应用脚本不主动异机同步；服务器另有阿里云文件备份，范围、30 天保留与恢复限制见[主机云备份](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md#云备份)。
+每天 Asia/Shanghai 03:45 加 0–5 分钟随机延迟，保留 14 份 daily。备份 unit 的可写目录必须是整个 /opt/recipebox，原因见共享的 [systemd 沙箱下照片硬链接备份失败](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#systemd-沙箱下照片硬链接备份失败)。备份 SQLite 一致性快照、图片硬链接和 SHA-256 清单。before-deploy 按共享发布保留策略轮换，manual 不自动清理；2026-09-27 已另取包含本项目数据库和照片的全应用归档，下载到维护电脑并校验，见 [共享备份说明](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md#手工数据归档)。本应用脚本不主动异机同步；服务器另有阿里云文件备份，范围、30 天保留与恢复限制见[主机云备份](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md#云备份)。
 
 ```sh
 systemctl status recipebox-backup.timer
@@ -106,3 +106,7 @@ journalctl -u recipebox --since '-1h' --no-pager | grep ' write '
 本项目为个人使用：在本地验证本次改动即可发布，不设全量回归门槛，不默认新增或保留永久测试。界面改动检查实际使用的电脑/手机场景；数据迁移、批量写入/删除和备份恢复先用隔离副本针对性验证。
 
 完整流程见 [本机发布与回退](DEPLOYMENT.md)。GitHub 只保存源码；本机 `make release` 构建，`make deploy` 更新生产，文档单独同步。
+
+## 发布材料自动清理
+
+服务器每天北京时间 05:00 按[发布材料自动保留](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/retention.md)保留最近 3 次成功发布、最近 5 份完整发布前备份，并保护当前版本、对应备份和待核对失败批次。共享实现、锁、回执、预览及停用命令由 server-operations 维护；本项目 deploy 保留发布脚本的 recovery 标记和每日备份的 flock 入口。首次安装先按共享文档建立 /run/lock/ali-release-retention.lock，再启用 backup timer。daily、manual、业务数据、门户 exports 和维护电脑构建材料不在此自动清理范围。

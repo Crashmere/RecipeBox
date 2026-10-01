@@ -29,7 +29,7 @@
       "id": "backups",
       "name": "数据备份",
       "path": "/opt/recipebox/backups",
-      "purpose": "daily、manual 与 before-deploy 一致性快照。",
+      "purpose": "每日快照保留 14 份；发布前快照保留最近 5 份及受保护版本对应快照；手工备份不自动清理。",
       "kind": "backups",
       "browse": true,
       "cleanup": true
@@ -38,7 +38,7 @@
       "id": "releases",
       "name": "部署版本",
       "path": "/opt/recipebox/releases",
-      "purpose": "程序、发布结果与 previous 回退材料。",
+      "purpose": "保留最近 3 次成功发布和当前运行版本；已确认恢复的失败批次在后续成功发布且超过 7 天后清理。",
       "kind": "releases",
       "browse": true,
       "cleanup": true
