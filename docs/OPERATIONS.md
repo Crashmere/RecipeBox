@@ -4,6 +4,8 @@
 
 操作 ali 前加载 server-operations 并显式读取 `/opt/AGENTS.md`。公开仓库不写正式公网地址；通过受信 SSH 别名取得现场信息。
 
+图片大小：Nginx 请求上限 26 MiB，程序单张图片上限 25 MiB。超过 1 MiB 的图片若在进入程序前返回 500，见[统一认证误拦大请求](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#统一认证误拦大请求)；共享修正保留本应用的上传限制。
+
 ## 布局
 
 `/opt/recipebox/bin/recipebox` 为内嵌页面的 Linux amd64 程序。config 放本项目 unit/location，data 放 recipebox.db、media、tmp，backups 放快照，docs 与 AGENTS.md 是受控文档副本，releases 留发布历史，current-commit 为程序来源。
