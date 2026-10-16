@@ -1,48 +1,48 @@
-# 安装与运行
+# Installation and Operation
 
-公网入口使用可信 IP 证书的 HTTPS，原有 /recipebox/ 路径保持。公网 HTTP 返回 308；API 客户端直接使用 HTTPS。Nginx 覆盖 `X-Forwarded-Proto`；写入来源校验只信任来自回环地址的代理头，仍拒绝跨站来源。证书、续期、回退和整机验收见 [共享 HTTPS 运维](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/https.md)（服务器副本 /opt/server-context/references/https.md）。本项目的后端与发布检查保留本机 HTTP，127.0.0.1:80 的代理检查入口不能从公网访问。公网已接入 ServerPortal 统一设备认证：先在 /portal/login 输入口令授权设备，随后使用同源 Secure/HttpOnly Cookie 访问；未授权 API 返回 401。本机发布检查与服务间调用保留。
+The public entry point uses HTTPS with a trusted IP certificate, preserving the existing `/recipebox/` path. Public HTTP returns 308; API clients use HTTPS directly. Nginx overwrites `X-Forwarded-Proto`; write-origin validation trusts proxy headers only from loopback addresses and still rejects cross-site origins. See [shared HTTPS operations](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/https.md) (server copy: `/opt/server-context/references/https.md`) for certificates, renewal, rollback, and whole-server acceptance. This project's backend and deployment checks retain local HTTP. The proxy-inspection entry point at `127.0.0.1:80` is not publicly reachable. Public access uses ServerPortal's shared device authentication: enter the passphrase at `/portal/login` to authorize a device, then use the same-origin Secure/HttpOnly Cookie. Unauthorized APIs return 401. Local deployment checks and service-to-service calls remain available.
 
-操作 ali 前加载 server-operations 并显式读取 `/opt/AGENTS.md`。公开仓库不写正式公网地址；通过受信 SSH 别名取得现场信息。
+Before operating `ali`, load server-operations and explicitly read `/opt/AGENTS.md`. Do not record the real public address in the public repository; obtain live information through the trusted SSH alias.
 
-图片大小：Nginx 请求上限 26 MiB，程序单张图片上限 25 MiB。超过 1 MiB 的图片若在进入程序前返回 500，见[统一认证误拦大请求](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#统一认证误拦大请求)；共享修正保留本应用的上传限制。
+Image sizes: Nginx permits requests up to 26 MiB, and the program permits each image up to 25 MiB. If an image over 1 MiB returns 500 before reaching the program, see [shared authentication incorrectly blocks large requests](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#shared-authentication-incorrectly-blocks-large-requests). The shared fix preserves this application's upload limit.
 
-## 布局
+## Layout
 
-`/opt/recipebox/bin/recipebox` 为内嵌页面的 Linux amd64 程序。config 放本项目 unit/location，data 放 recipebox.db、media、tmp，backups 放快照，docs 与 AGENTS.md 是受控文档副本，releases 留发布历史，current-commit 为程序来源。
+`/opt/recipebox/bin/recipebox` is the Linux amd64 program with embedded pages. `config` contains this project's units/location; `data` contains `recipebox.db`, `media`, and `tmp`; `backups` contains snapshots; `docs` and `AGENTS.md` are controlled documentation copies; `releases` retains deployment history; and `current-commit` identifies the program source.
 
-运行身份 recipebox，发布 recipebox-deploy；data/backups 0700，文件 0600，程序/配置 root 管理。监听 127.0.0.1:18083，经共享 Nginx `/recipebox/` 访问，不增加公网监听端口。systemd 限制写入 data，内存 640 MiB，CPU 100%。
+The runtime identity is `recipebox`, and the deployment identity is `recipebox-deploy`. `data`/`backups` use 0700 and files use 0600; root manages programs and configuration. The service listens on `127.0.0.1:18083` and is reached through shared Nginx under `/recipebox/`, without adding a public listening port. systemd limits writes to `data`, memory to 640 MiB, and CPU to 100%.
 
-## 首次安装
+## Initial Installation
 
-先核对端口、身份、目录、现有全部服务健康。Go 在本机构建；服务器只需 libvips-tools、libheif-plugin-libde265（同机现有官方 Ubuntu 包），不安装 Go/Node/Docker 服务。软件安装遵循 software-installation。
+First check the port, identities, directories, and health of all existing services. Build Go locally. The server needs only `libvips-tools` and `libheif-plugin-libde265` (the existing official Ubuntu packages on this host); do not install Go, Node, Docker, or a database service. Follow software-installation for software installation.
 
 ```sh
 make linux
-# 将已审阅提交中的 deploy 与校验后的二进制上传独立暂存目录。
+# Upload deploy files from the reviewed commit and the verified binary to an independent staging directory.
 bash deploy/install.sh /path/to/recipebox-linux-amd64
 ln -s /opt/recipebox/config/nginx-location.conf /etc/nginx/app-locations/recipebox.conf
 nginx -t
 systemctl reload nginx
 ```
 
-install 拒绝覆盖现有目录/身份，显式初始化正式空库，开启服务和备份 timer，取得首份备份。正式库不填入测试记录。安装后核对四个服务直连/反代、深链接和资源。
+`install` refuses to overwrite existing directories/identities, explicitly initializes an empty production database, starts the service and backup timer, and obtains the first backup. Do not put test records in the production database. After installation, check direct and proxied access for all four services, deep links, and assets.
 
-## 本地开发与浏览器验证
+## Local Development and Browser Verification
 
-README 有启动步骤。当前 Mac 有 goenv 包装器时用 `GOENV_VERSION=1.24.0 go ...`，go.mod 选择 go1.26.8；不更改系统默认版本。仅首次 init，已有库直接 serve。
+README contains startup steps. When the current Mac has the goenv wrapper, use `GOENV_VERSION=1.24.0 go ...`; `go.mod` selects `go1.26.8`. Do not change the system default version. Run `init` only once; use `serve` directly for an existing database.
 
 ```sh
 npm --prefix web run build
 bin/recipebox init --data .local/e2e-data
 bin/recipebox serve --data .local/e2e-data --with-prefix
-# 另一终端：
+# In another terminal:
 ```
 
-若要测试空库，另建唯一目录，不清空正式数据。
+To test an empty database, create another uniquely named directory; do not clear production data.
 
-## 备份与恢复
+## Backup and Recovery
 
-每天 Asia/Shanghai 03:45 加 0–5 分钟随机延迟，保留 14 份 daily。备份 unit 的可写目录必须是整个 /opt/recipebox，原因见共享的 [systemd 沙箱下照片硬链接备份失败](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#systemd-沙箱下照片硬链接备份失败)。备份 SQLite 一致性快照、图片硬链接和 SHA-256 清单。before-deploy 按共享发布保留策略轮换，manual 不自动清理；2026-09-27 已另取包含本项目数据库和照片的全应用归档，下载到维护电脑并校验，见 [共享备份说明](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md#手工数据归档)。本应用脚本不主动异机同步；服务器另有阿里云文件备份，范围、30 天保留与恢复限制见[主机云备份](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md#云备份)。
+Run daily at 03:45 Asia/Shanghai with a randomized delay of 0–5 minutes, retaining 14 `daily` backups. The backup unit's writable directory must be all of `/opt/recipebox`; see [photo hard-link backups fail in a systemd sandbox](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#photo-hard-link-backups-fail-in-a-systemd-sandbox) for the reason. A backup contains a consistent SQLite snapshot, photo hard links, and a SHA-256 manifest. `before-deploy` rotates under the shared deployment-retention policy; `manual` is not cleaned automatically. On 2026-09-27, an all-application archive containing this project's database and photos was separately downloaded to the maintenance computer and verified; see the [shared backup description](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md#manual-data-archives). This application's scripts do not proactively synchronize off-host. The server separately uses Alibaba Cloud file backup; see [host cloud backup](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md#cloud-backup) for its scope, 30-day retention, and recovery limits.
 
 ```sh
 systemctl status recipebox-backup.timer
@@ -51,18 +51,18 @@ journalctl -u recipebox-backup.service -n 50 --no-pager
 runuser -u recipebox -- /opt/recipebox/bin/recipebox backup --data /opt/recipebox/data --out /opt/recipebox/backups/manual-UNIQUE
 ```
 
-备份目的目录必须不存在；锁冲突需稍后重试。不要直接复制活跃 WAL 主文件或修改硬链接照片。只有完整 manifest.json 的目录才可恢复。
+The backup destination directory must not exist. Retry later on a lock conflict. Do not directly copy the active WAL main file or modify hard-linked photos. Only a directory with a complete `manifest.json` may be restored.
 
 ```sh
 recipebox restore --source /path/to/backup --out /path/to/new-restore-directory
 recipebox check --data /path/to/new-restore-directory
-# 先检查 19083 空闲，再启动隔离恢复实例
+# First confirm that port 19083 is free, then start the isolated recovery instance
 recipebox serve --data /path/to/new-restore-directory --listen 127.0.0.1:19083 --with-prefix
 ```
 
-restore 验证校验和与相对路径，拒绝已有目标，照片复制为独立文件。生产恢复前确认时点和可能丢失的后续修改，停本应用，保留当前目录，恢复到新目录并校验后切换身份/路径，重启验证。程序回退不等于数据库回退。
+`restore` verifies hashes and relative paths, rejects an existing target, and copies photos into independent files. Before production recovery, confirm the recovery point and possible loss of later changes, stop this application, preserve the current directory, restore into a new directory, verify it, then switch identity/path and restart for validation. Program rollback is not database rollback.
 
-## 诊断
+## Diagnostics
 
 ```sh
 systemctl status recipebox recipebox-backup.timer
@@ -75,38 +75,38 @@ du -sh /opt/recipebox/data /opt/recipebox/backups
 vips --version
 ```
 
-每次记录写入在 journal 记一行 `write <路径> action=… status=… replay=… <服务端耗时>`，不含表单内容；格式、JSON 错误在解析阶段拒绝，不记录。保存慢时，先按时间核对这一行：耗时仅几毫秒且随后出现 `replay=true`，说明服务端已写入，是响应在网络上丢失或延迟后同一请求再次到达；共享 Nginx 访问日志的时间是请求结束时间，不含耗时。
+Every record write emits one journal line, `write <path> action=… status=… replay=… <server-duration>`, without form contents. Format and JSON errors are rejected during parsing and are not logged. When a save is slow, first correlate this line by time. A duration of only a few milliseconds followed by `replay=true` means the server already wrote the change and the response was lost or delayed in the network before the same request arrived again. The shared Nginx access-log time is the request completion time, not a duration.
 
 ```sh
 journalctl -u recipebox --since '-1h' --no-pager | grep ' write '
 ```
 
-缺库/损坏时查备份和权限，不能通过 init 创建空库掩盖错误。507 核对根盘/照片配额；429 核对备份锁与并发上传；422 核对图片格式与 vips 日志。libvips 8.15/8.18 共用 `--export-profile=srgb`。
+For a missing or damaged database, inspect backups and permissions; do not use `init` to create an empty database and conceal the error. For 507, check root-disk and photo quotas; for 429, check the backup lock and concurrent uploads; for 422, check image format and vips logs. libvips 8.15 and 8.18 both use `--export-profile=srgb`.
 
-文档提交推送后运行 `~/agent-config/skills/server-operations/scripts/sync-docs.sh RecipeBox`，它负责漂移检查、安装到 /opt/recipebox、逐文件校验、docs/SOURCE 和清理（用法见 server-operations 的 maintenance）。共享清单改动后不带参数运行同一脚本。
+After committing and pushing documentation, run `~/agent-config/skills/server-operations/scripts/sync-docs.sh RecipeBox`. It handles drift checks, installation under `/opt/recipebox`, per-file verification, `docs/SOURCE`, and cleanup; see server-operations maintenance for usage. After changing the shared inventory, run the same script without arguments.
 
-## ServerPortal 接入材料
+## ServerPortal Integration Materials
 
-`deploy/portal.json` 是本应用资源说明的维护源。本机发布使用 server-operations 校验器检查，再将同一声明与二进制保存到同一本地版本目录；发布前执行 `portal-check`，发布后执行 `portal`，通过现有受限 SSH 安装到 `/opt/recipebox/config/portal.json` 并核对采集器实际加载的 SHA-256。`config/portal-source.json` 记录声明来源提交；它与程序的 current-commit 各自表示不同材料的版本。
+`deploy/portal.json` is the maintained source for this application's resource description. Local deployment validates it with the server-operations validator, then stores the same declaration and binary in the same local version directory. It runs `portal-check` before deployment and `portal` afterward, using the existing restricted SSH identity to install `/opt/recipebox/config/portal.json` and verify the SHA-256 actually loaded by the collector. `config/portal-source.json` records the declaration's source commit; it and the program's `current-commit` identify versions of different materials.
 
-门户从 `/opt/serverportal/registry.d/recipebox.json` 的受控链接发现本应用，声明成功更新后自动加载，无需重启。首次正常 本机发布也会建立链接，无需再编辑门户中央应用列表。普通发布可更新本应用的声明，其他 unit/env/Nginx/发布脚本仍由管理员安装。
+The portal discovers this application through the controlled link `/opt/serverportal/registry.d/recipebox.json`. It automatically reloads a successfully updated declaration without a restart. The first normal local deployment also creates the link, so there is no separate central application list to edit. An ordinary deployment may update this application's declaration; an administrator still installs other units, env files, Nginx configuration, and deployment scripts.
 
-源码或数据库行为变更不能使用该选项代替程序发布。
+Source-code or database-behavior changes cannot use this option as a substitute for program deployment.
 
-数据根、媒体、备份格式、unit、端口或访问路径变化时，同一提交维护声明及对应文档，更新共享清单并核对资源覆盖。文件、媒体、数据库表和 systemd 状态由门户自动读取；目录用途、API 说明和权限边界须由维护 agent 明确更新。共同协议、失败处置与新应用接入见 [门户维护](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/portal.md)。
+When data roots, media, backup formats, units, ports, or access paths change, update the declaration and corresponding documentation in the same commit, update the shared inventory, and check resource coverage. The portal reads files, media, database tables, and systemd state automatically; a maintenance agent must explicitly update directory purposes, API descriptions, and permission boundaries. See [portal maintenance](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/portal.md) for shared protocols, failure handling, and new-application onboarding.
 
-门户 /portal/ 已统一保护公网访问，发布脚本通过回环检查应用健康，本机发布公网检查预期未授权返回 401。设备授权永久有效至主动撤销，Cookie 经共享 Nginx 随有效请求续期；本应用若新增 add_header，必须保留共享 Set-Cookie 转发，规则及验收见共享门户维护文档。门户备份使用本应用原生一致性快照；真实完整链恢复验收按用户要求暂缓，不因本次维护自动继续下载或恢复。
+The portal at `/portal/` protects public access. Deployment scripts check application health through loopback, and local deployment's public check expects 401 for unauthorized access. Device authorization remains valid until explicitly revoked; shared Nginx renews the Cookie on valid requests. If this application adds an `add_header`, it must preserve shared `Set-Cookie` forwarding; see shared portal maintenance for rules and acceptance. Portal backups use this application's native consistent snapshot. At the user's request, real full-chain recovery acceptance remains deferred and must not automatically resume downloads or restoration during this maintenance.
 
-## 手机桌面图标
+## Phone Home-Screen Icon
 
-现有 /recipebox/apple-touch-icon.png 为 180×180；Nginx 规则仅放行它与 favicon.ico、recipebox.svg 的 GET/HEAD。页面、API 和用户媒体继续使用设备认证。共同原因、部署状态与手机验收见[共享排障记录](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#统一认证后-iphone-桌面图标缺失)。
+The current `/recipebox/apple-touch-icon.png` is 180×180. Nginx rules allow anonymous GET/HEAD only for it, `favicon.ico`, and `recipebox.svg`. Pages, APIs, and user media remain protected by device authentication. See the [shared troubleshooting record](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#missing-iphone-home-screen-icons-after-shared-authentication) for the common cause, deployment status, and phone acceptance.
 
-## 当前发布入口
+## Current Release Entry Point
 
-本项目为个人使用：在本地验证本次改动即可发布，不设全量回归门槛，不默认新增或保留永久测试。界面改动检查实际使用的电脑/手机场景；数据迁移、批量写入/删除和备份恢复先用隔离副本针对性验证。
+This project is for personal use: validate the current change locally before release; there is no full-regression gate, and permanent tests are neither added nor retained by default. For UI changes, check the computer and phone scenarios that are actually used. Validate data migrations, bulk writes/deletions, and backup restoration specifically against an isolated copy first.
 
-完整流程见 [本机发布与回退](DEPLOYMENT.md)。GitHub 只保存源码；本机 `make release` 构建，`make deploy` 更新生产，文档单独同步。
+See [Local Deployment and Rollback](DEPLOYMENT.md) for the complete procedure. GitHub stores only source code. Local `make release` builds, `make deploy` updates production, and documentation is synchronized separately.
 
-## 发布材料自动清理
+## Automatic Cleanup of Deployment Materials
 
-服务器每天北京时间 05:00 按[发布材料自动保留](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/retention.md)保留最近 3 次成功发布、最近 5 份完整发布前备份，并保护当前版本、对应备份和待核对失败批次。共享实现、锁、回执、预览及停用命令由 server-operations 维护；本项目 deploy 保留发布脚本的 recovery 标记和每日备份的 flock 入口。首次安装先按共享文档建立 /run/lock/ali-release-retention.lock，再启用 backup timer。daily、manual、业务数据、门户 exports 和维护电脑构建材料不在此自动清理范围。
+Every day at 05:00 Beijing time, the server follows [automatic retention of deployment materials](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/retention.md) to retain the latest 3 successful deployments and latest 5 complete pre-deployment backups, while protecting the current version, its corresponding backup, and failed batches pending review. server-operations owns the shared implementation, lock, receipts, preview, and disable command. This project's `deploy` retains the deployment script's `recovery` marker and the daily backup's `flock` entry point. On first installation, create `/run/lock/ali-release-retention.lock` under the shared documentation before enabling the backup timer. `daily`, `manual`, business data, portal `exports`, and build materials on the maintenance computer are outside this automatic cleanup scope.

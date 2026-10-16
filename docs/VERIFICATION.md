@@ -1,7 +1,7 @@
-# 验证原则与已知限制
+# Verification Principles and Known Limitations
 
-日常验证只针对本次改动，使用隔离合成数据；具体发布与回退见 [DEPLOYMENT.md](DEPLOYMENT.md)。历史回归套件与逐次用例计数已退役，原记录可在 Git 历史查询。
+Routine validation targets only the current change and uses isolated synthetic data. See [DEPLOYMENT.md](DEPLOYMENT.md) for exact deployment and rollback. Historical regression suites and per-run case counts are retired; the old records remain available in Git history.
 
-图片处理依赖 libvips；涉及图片或备份变化时，针对输入格式、输出可读性以及数据库/照片一致性验证。真实手机相机、相册 HEIC 导出和软键盘需要对应设备确认，桌面移动视口不能代替真机结果。标准照片最长边 2560 px，不保存原始摄影文件。
+Image processing depends on libvips. When images or backups change, validate input formats, output readability, and database/photo consistency specifically. Real phone camera behavior, HEIC export from the photo library, and the soft keyboard require confirmation on the corresponding device; a mobile viewport on desktop does not substitute for a real-device result. Standard photos have a longest edge of 2560 px, and original photographic files are not retained.
 
-生产采用 HTTPS 和统一设备认证。每日备份是同盘快照；已有一次手工异机归档，尚无自动异机同步。实际版本读 current-commit，文档来源读 docs/SOURCE；磁盘和服务状态现场核对，不固定旧 PID 或版本号。
+Production uses HTTPS and shared device authentication. Daily backups are same-disk snapshots. One manual off-host archive exists, but there is no automatic off-host synchronization. Read the actual version from `current-commit` and the documentation source from `docs/SOURCE`. Check disk and service state live rather than pinning an old PID or version number.

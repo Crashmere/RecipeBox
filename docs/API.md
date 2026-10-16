@@ -1,38 +1,38 @@
 # HTTP API
 
-外部 `/recipebox/`，Nginx 去前缀；以下为 Go 内部路径，`{id}`、`{key}` 为路径参数。公网 API 与媒体由 ServerPortal 统一设备认证保护，未授权返回 401；本机回环调用保留。JSON camelCase。所有 POST 使用 32 位小写十六进制 Idempotency-Key；记录写入同键必须保持 HTTP 方法、内部路径与 body 字节一致，上传同键须保持原文件字节一致。修改已有记录必须带当前 revision。
+The external prefix is `/recipebox/`, which Nginx removes. The following are internal paths of the Go service; `{id}` and `{key}` are path parameters. Public APIs and media are protected by ServerPortal's shared device authentication and return 401 when unauthorized; local loopback calls remain available. JSON uses camelCase. Every POST uses a 32-character lowercase hexadecimal `Idempotency-Key`. Reuse of a key for record writes must preserve the HTTP method, internal path, and body bytes; reuse for an upload must preserve the original file bytes. Changes to an existing record must include the current `revision`.
 
-| 方法与路径 | 用途 |
+| Method and path | Purpose |
 | --- | --- |
-| GET /healthz | 数据库连接健康 |
-| GET /api/records | 全部未删除记录数组，不分页；查询参数 trash=1 取回收站，按 updatedAt、id 倒序 |
-| GET /api/records/{id} | 单个记录，包含 deletedAt，也可读取尚未清理的回收站记录 |
-| POST /api/records | 创建，kind=recipe/pantry、name 必填，action 省略或为 save；返回 200 和 Record |
-| POST /api/records/{id} | body 包含当前 revision；action 为 save/favorite/consume/log/remove_log/delete/restore，成功返回 200 和完整 Record |
-| GET /api/operations/{key} | 取得原记录写入或上传结果，未知返回 404，不代表资源当前最新状态 |
-| POST /api/uploads | 原始图片文件 body（非 multipart），最大 25 MiB；返回 201 和 Media |
-| GET /api/media/{id}/main | 标准 JPEG，仅有效暂存或未删除记录仍引用的照片 |
-| GET /api/media/{id}/thumb | WebP 缩略图，使用与 main 相同的归属和有效期检查 |
-| GET /api/export | 全部未删除记录的 ZIP，含 recipes-and-pantry.json 与 photos/{id}.jpg，不含回收站 |
+| GET /healthz | Check database-connection health |
+| GET /api/records | Return an unpaginated array of all non-deleted records; query parameter `trash=1` returns the recycle bin; sorted by `updatedAt`, then `id`, descending |
+| GET /api/records/{id} | Return one record, including `deletedAt`; records still retained in the recycle bin can also be read |
+| POST /api/records | Create a record; `kind=recipe/pantry` and `name` are required; `action` is omitted or `save`; returns 200 and a Record |
+| POST /api/records/{id} | Body includes the current `revision`; `action` is `save`/`favorite`/`consume`/`log`/`remove_log`/`delete`/`restore`; success returns 200 and the complete Record |
+| GET /api/operations/{key} | Return the result of the original record write or upload; unknown keys return 404, which does not describe the resource's current state |
+| POST /api/uploads | Original image file as the body (not multipart), maximum 25 MiB; returns 201 and Media |
+| GET /api/media/{id}/main | Standard JPEG, available only for a valid staged photo or one still referenced by a non-deleted record |
+| GET /api/media/{id}/thumb | WebP thumbnail, with the same ownership and validity checks as `main` |
+| GET /api/export | ZIP containing all non-deleted records, with `recipes-and-pantry.json` and `photos/{id}.jpg`; excludes the recycle bin |
 
-本表覆盖当前业务、健康和媒体接口；门户的 `deploy/portal.json.apis` 与本表保持一致。每个方法和路径只登记一次；下列 action 是同一个记录写入接口的 JSON 字段，不是独立路径或查询参数。 核对与同步流程见[共享排障说明](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#门户-api-列表与服务不一致)。
+This table covers the current business, health, and media interfaces; keep `deploy/portal.json.apis` consistent with it. Register each method and path only once. The `action` values below are JSON fields of the same record-write interface, not separate paths or query parameters. See the [shared troubleshooting guidance](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#portal-api-list-does-not-match-the-service) for checking and synchronization procedures.
 
-## 记录写入动作
+## Record Write Actions
 
-`POST /api/records/{id}` 的 JSON body 始终包含当前 revision，例如 `{"revision":3,"action":"favorite","favorite":true}`。
+The JSON body of `POST /api/records/{id}` always includes the current `revision`, for example `{"revision":3,"action":"favorite","favorite":true}`.
 
-| action | 输入与行为 |
+| `action` | Input and behavior |
 | --- | --- |
-| save（默认） | 全量资料；保留原 kind、创建时间与下厨日记，省略可编辑字段会使用其零值，不是局部更新 |
-| favorite | favorite 布尔值，仅菜谱可收藏 |
-| consume | 常备食品 quantity 减一，无库存或类型不符返回 409 |
-| log | log={id?,date,note,rating}；仅菜谱，无 id 新增，有 id 修改已有日记 |
-| remove_log | log.id 指定删除的日记 |
-| delete | 软删除到回收站 |
-| restore | 恢复 30 天内删除记录；未删除返回 409，过期返回 410 |
+| `save` (default) | Full profile; preserves the original `kind`, creation time, and cooking logs. Omitted editable fields use their zero values; this is not a partial update |
+| `favorite` | Boolean `favorite`; only recipes can be favorited |
+| `consume` | Decrement a pantry item's `quantity` by one; no stock or the wrong kind returns 409 |
+| `log` | `log={id?,date,note,rating}`; recipes only; without `id`, add a log; with `id`, update the existing log |
+| `remove_log` | `log.id` selects the cooking log to delete |
+| `delete` | Soft-delete into the recycle bin |
+| `restore` | Restore a record deleted within 30 days; a non-deleted record returns 409 and an expired record returns 410 |
 
-所有动作成功后 revision 增加并返回完整 Record；首次创建只能使用 save，已有记录不能更换 kind。JSON 表单上限 256 KiB，拒绝未知字段和尾随 JSON。上传支持 JPEG、PNG、WebP、HEIC/HEIF；Media 为 {id,width,height,bytes,createdAt}。暂存照片须在 24 小时内绑定到记录；同一照片只能属于一个记录。main/thumb 之外的变体、已移除照片、已删除记录的照片和过期暂存照片都返回 404。
+Every successful action increments `revision` and returns the complete Record. Initial creation can use only `save`, and an existing record cannot change `kind`. JSON forms are limited to 256 KiB and reject unknown fields and trailing JSON. Uploads support JPEG, PNG, WebP, HEIC, and HEIF. Media has the shape `{id,width,height,bytes,createdAt}`. A staged photo must be attached to a record within 24 hours, and one photo can belong to only one record. Variants other than `main`/`thumb`, removed photos, photos on deleted records, and expired staged photos all return 404.
 
-记录包含 id/kind/revision/name/category/notes/tags/ingredients/steps/minutes/servings/favorite/logs/photoIds/quantity/unit/location/purchaseDate/expiryDate/createdAt/updatedAt/deletedAt。标准定义见 internal/app/model.go 与 web/src/types.ts。
+A record contains `id`/`kind`/`revision`/`name`/`category`/`notes`/`tags`/`ingredients`/`steps`/`minutes`/`servings`/`favorite`/`logs`/`photoIds`/`quantity`/`unit`/`location`/`purchaseDate`/`expiryDate`/`createdAt`/`updatedAt`/`deletedAt`. Canonical definitions are in `internal/app/model.go` and `web/src/types.ts`.
 
-应用错误 JSON={code,message}：400 格式/提交号；403 来源；404 缺失；409 版本冲突、复用键或无库存；410 恢复期限已过；413 超量；415 格式；422 内容验证/图片解码；429 繁忙/限速；500 内部错误；507 容量。公网认证失败由共享入口返回 401。每 IP 每分钟写操作 120，上传单独 30（仅接受 loopback 代理传来的 X-Real-IP）。未返回响应不表示未提交，必须查询原 key 或原字节重试；网页在写入 3 秒无回复后自动查询原 key。操作结果由维护清理保留约 7 天，不应自动重试更早的未知提交。
+Application errors are JSON `{code,message}`: 400 for format/submission-key errors; 403 for origin; 404 for missing resources; 409 for version conflict, key reuse, or no stock; 410 for an expired restore window; 413 for size; 415 for format; 422 for content validation/image decoding; 429 for busy/rate limit; 500 for internal errors; and 507 for capacity. The shared public entry point returns 401 for authentication failure. Per IP, write operations are limited to 120 per minute and uploads separately to 30; only `X-Real-IP` from a loopback proxy is accepted. No response does not mean the operation was not committed: query the original key or retry the original bytes. After a write has no response for 3 seconds, the web page automatically queries the original key. Operation results are retained by maintenance for about 7 days; an older unknown submission must not be retried automatically.

@@ -1,39 +1,39 @@
-# 架构与业务规则
+# Architecture and Business Rules
 
-浏览器 → Nginx `/recipebox/` → Go `127.0.0.1:18083` → SQLite 与本地照片。Vue 3 / TypeScript / Vite 页面内嵌 Go 程序，生产不需要 Node。公网通过 ServerPortal 统一设备认证后共享读写，应用内不区分账户或角色。
+Browser → Nginx `/recipebox/` → Go `127.0.0.1:18083` → SQLite and local photos. The Vue 3 / TypeScript / Vite page is embedded in the Go program, so production does not require Node. Public access is shared for reading and writing after ServerPortal device authentication; the application does not distinguish accounts or roles.
 
-## 菜谱与常备食品
+## Recipes and Pantry Items
 
-records 中 kind=recipe 表示菜谱，kind=pantry 表示食品；两类分别展示与操作。分类支持内置建议与自定义文本。名称必填（120 字），其余内容可逐步补齐。
+In `records`, `kind=recipe` denotes a recipe and `kind=pantry` denotes a pantry item; each kind is displayed and operated separately. Categories support built-in suggestions and custom text. Name is required (120 characters); other content can be completed gradually.
 
-菜谱支持 100 条食材/步骤、20 个标签、10 张照片，时长与人数 0 表示未知，不要求精确用量。食材空行与做法空行保存时去除；用量有值但名称为空时报错。照片首张为封面。下厨日记最多 1000 次，包含日期、0–5 星（0 未评分）和 4000 字心得；修改资料保留服务端日记，新增/修改/删除日记使用独立动作。
+A recipe supports 100 ingredients/steps, 20 tags, and 10 photos. Zero duration or servings means unknown, and exact quantities are not required. Empty ingredient and method rows are removed on save; a quantity with an empty ingredient name is an error. The first photo is the cover. A recipe supports up to 1,000 cooking-log entries, each containing a date, a 0–5-star rating (0 means unrated), and a 4,000-character note. Editing the profile preserves server-side cooking logs; adding, changing, and deleting a log use independent actions.
 
-食品使用整数数量（0–9999）、自由单位、存放位置、购买/到期日期与备注。一次 consume 只减 1，数量为 0 不可继续消耗。到期提醒按浏览器本地日历日期计算，区分未知、已过期、今天、30 天内。已吃完单独筛选，编辑数量即可补货。菜谱与食品不会自动增减对方数据。
+A pantry item uses an integer quantity (0–9999), free-form unit, storage location, purchase/expiry dates, and notes. One `consume` decrements only 1, and quantity 0 cannot be consumed further. Expiry reminders use the browser's local calendar date and distinguish unknown, expired, today, and within 30 days. Depleted items have a separate filter; editing quantity replenishes stock. Recipes and pantry items never update one another automatically.
 
-列表 API 返回当前家庭完整记录集，前端搜索和排序，菜谱分批渲染 24 条。适合家庭规模；没有服务端分页，不应未经评估用于大型公共菜谱站。删除进入 30 天回收站，日常维护清理过期记录；导出仅含未删除记录和标准照片，JSON + ZIP，不是数据库恢复格式。
+The list API returns the current household's complete record set; the frontend searches and sorts it and renders recipes in batches of 24. This suits household scale. There is no server-side pagination, and it must not be used for a large public recipe site without evaluation. Deletion places a record in the 30-day recycle bin, whose expired records are removed by routine maintenance. Export contains only non-deleted records and standard photos as JSON + ZIP; it is not a database-recovery format.
 
-## 数据完整性
+## Data Integrity
 
-SQLite application_id=1380077378，user_version=1，WAL + FULL synchronous、外键、5 秒 busy_timeout、单连接。records 保存有界业务 JSON 与版本/时间列；media 保存不可变文件与归属；changes 保留每次写入后的快照；operations 保存幂等请求指纹与结果 7 天。
+SQLite uses `application_id=1380077378`, `user_version=1`, WAL + FULL synchronous mode, foreign keys, a 5-second `busy_timeout`, and one connection. `records` stores bounded business JSON plus version/time columns; `media` stores immutable files and ownership; `changes` retains a snapshot after every write; and `operations` stores idempotent request fingerprints and results for 7 days.
 
-所有记录修改在事务中检查 revision，并更新记录、照片引用、版本和幂等结果。重试同键同指纹返回原结果，不同内容复用键返回 409。consume、favorite、log 只改变目标字段。启动必须已有正确身份/schema/完整性的数据库；Check 同时核对照片文件与记录引用。init 显式创建新库并拒绝覆盖。没有隐式迁移。
+Every record modification checks `revision` in a transaction and updates the record, photo references, version, and idempotency result. Repeating the same key and fingerprint returns the original result; reusing a key with different content returns 409. `consume`, `favorite`, and `log` change only their target fields. Startup requires an existing database with the correct identity, schema, and integrity. `Check` also validates photo files and record references. `init` explicitly creates a new database and refuses overwrite. There is no implicit migration.
 
-## 图片与备份
+## Images and Backups
 
-复用同机 FabricWorld 验证过的 libvips 处理流程，复制后的实现归本项目维护。每张最多 25 MiB、80 MP，按签名接受 JPEG/PNG/WebP/HEIC/HEIF，拒绝 SVG 和动画。转换修正方向、sRGB、去元数据，输出最长边 2560 px JPEG（Q88）和 640 px WebP（Q80）。原始上传仅临时存储；标准照片与缩略图不可原地修改。
+The project reuses the libvips processing flow proven on the same host by FabricWorld, but maintains its own copied implementation. Each image is limited to 25 MiB and 80 MP. Signatures may identify JPEG, PNG, WebP, HEIC, or HEIF; SVG and animation are rejected. Conversion corrects orientation, converts to sRGB, removes metadata, and emits a longest-edge 2560 px JPEG (Q88) and a 640 px WebP thumbnail (Q80). Original uploads are stored only temporarily; standard photos and thumbnails are immutable in place.
 
-单次处理槽、40 秒转换超时、VIPS_CONCURRENCY=1、5 GiB 媒体配额、根盘空闲低于 5 GiB 时拒绝新照片。systemd MemoryMax=640M、CPUQuota=100%，约束包含子进程。配额不是磁盘隔离，需关注各服务总使用量。
+There is one processing slot, a 40-second conversion timeout, `VIPS_CONCURRENCY=1`, a 5 GiB media quota, and rejection of new photos when the root disk has less than 5 GiB free. systemd uses `MemoryMax=640M` and `CPUQuota=100%`, including child processes. The quota is not disk isolation; monitor the total use of all services.
 
-未绑定照片 24 小时内可保存；照片移除保留 30 天。清理过期媒体行，回收至少 24 小时的孤立文件。上传/导出持共享 flock，备份/清理持独占锁，忙时返回可读错误。备份使用 VACUUM INTO、不可变照片硬链接、SHA-256 manifest，恢复复制成独立文件并验证引用。每日维护保留 14 份 daily。
+Unattached photos remain saveable for 24 hours; removed photos are retained for 30 days. Maintenance removes expired media rows and orphan files at least 24 hours old. Upload/export takes a shared `flock`; backup/cleanup takes the exclusive lock, returning a readable error when busy. Backups use `VACUUM INTO`, hard links for immutable photos, and a SHA-256 manifest. Recovery copies photos into independent files and verifies references. Routine maintenance retains 14 `daily` backups.
 
-## 浏览器交互
+## Browser Interaction
 
-全站页头使用 `sticky; top: 0` 和不透明背景，滚动时品牌与更多菜单留在顶部；根滚动区预留 104px 顶部定位空间，原有底部导航和保存区继续保留滚动余量。手机视口采用浏览器默认安全区布局，不启用 `viewport-fit=cover`；原因和真机验证边界见 [顶部安全区说明](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#iphone-主屏幕页面顶部发虚)。
+The site-wide header uses `sticky; top: 0` with an opaque background, keeping the brand and more menu at the top while scrolling. The root scrolling area reserves 104 px of top positioning space, while the existing bottom navigation and save area retain their scroll allowance. Mobile viewports use the browser's default safe-area layout and do not enable `viewport-fit=cover`; see the [top safe-area explanation](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#top-of-an-iphone-home-screen-page-appears-blurry) for the reason and real-device verification boundary.
 
-暖白/番茄红，原创 SVG 菜谱餐盘图标和厨房插画，无外部字体或图片请求。ICO 16/32/48 px、Apple Touch 180 px 由 npm run icons 生成，使用现有 libvips。BASE_URL 为 /recipebox/，深链接刷新由后端回落 index.html。
+The visual style uses warm white and tomato red, with an original SVG recipe-plate icon and kitchen illustrations and no external font or image requests. ICO at 16/32/48 px and Apple Touch at 180 px are generated by `npm run icons` using the existing libvips. `BASE_URL` is `/recipebox/`; backend fallback to `index.html` supports refreshing deep links.
 
-菜谱照片位于基本信息内、人数之后，“这道菜的小故事”在侧栏，手机上排在做法之后；食品照片在侧栏，手机上排在基本信息之后。缩略图在 480 px 以下两列。网格中单独成行的字段保留下边距。食材名称、用量、移除按钮分列，步骤排序独占一行，日期在窄屏独占一行。原生 date 的边框/内边距放到外层，防止 WebKit 宽度异常。输入字体 16 px；保存条与底部导航、safe-area 错开，表单滚动留出控件空间。dialog 保留原生模态层与 Escape 关闭；全站 `web/src/keyboard.ts` 拦截普通 Tab / Shift+Tab，弹窗内同样保持当前焦点。Ctrl/Command/Alt 组合和输入法组合输入不拦截。控件取消焦点轮廓、聚焦阴影与聚焦变色，日期容器也不随焦点高亮，遵循[共享网页键盘与焦点约定](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/conventions.md#网页键盘与焦点)。图片上传有进度、失败重试和移除，未上传成功时禁止保存。
+Recipe photos appear within basic information after servings, while the exact UI section “这道菜的小故事” is in the sidebar and moves after the method on phones. Pantry-item photos are in the sidebar and move after basic information on phones. Thumbnails use two columns below 480 px. Fields that occupy their own grid row retain bottom spacing. Ingredient name, quantity, and remove button use separate columns; step ordering occupies its own row; and dates occupy their own row on narrow screens. Native date borders/padding are applied to an outer container to prevent WebKit width anomalies. Inputs use 16 px text. The save bar avoids the bottom navigation and safe area, and forms leave scrolling space for controls. `dialog` retains the native modal layer and Escape-to-close. Site-wide `web/src/keyboard.ts` intercepts ordinary Tab / Shift+Tab, keeping the current focus inside dialogs as well. Ctrl/Command/Alt combinations and IME composition are not intercepted. Controls remove focus outlines, focus shadows, and focus-only color changes; date containers also do not highlight with focus, following the [shared web keyboard and focus conventions](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/conventions.md#web-keyboard-and-focus). Image uploads show progress, retry, and removal; saving is disabled while an upload has not succeeded.
 
-表单与已上传引用暂存 sessionStorage，24 小时内可继续；离开时确认并提示未上传 File 不能恢复。成功才清草稿，待确认保存持久化原请求和幂等键；编辑器刷新先查询原结果，成功后找回记录。所有写入 3 秒未收到回复时，每 3 秒按原幂等键查询 operations（单次 5 秒超时）；查到即按成功结束，不重发请求。原请求仍等满 120 秒，晚到的响应被忽略。多设备冲突保留草稿，提供最新记录链接与草稿对照，用户合并后再提交。sessionStorage 仅属于当前设备/标签页，不是跨设备同步或长期备份。
+The form and uploaded-reference draft are staged in `sessionStorage` and can be resumed for 24 hours. On leaving, the page asks for confirmation and warns that an unuploaded File cannot be recovered. A draft is cleared only after success. A pending save persists its original request and idempotency key; after an editor refresh, the page first queries the original result and recovers the record after success. When any write has no response for 3 seconds, it queries `operations` every 3 seconds with the original idempotency key, using a 5-second timeout for each query. Finding the result completes the operation as successful without resending the request. The original request remains pending for the full 120 seconds, and a late response is ignored. A multi-device conflict preserves the draft and provides links to the latest record and a draft comparison; the user merges them before resubmitting. `sessionStorage` belongs only to the current device/tab and is not cross-device synchronization or a long-term backup.
 
-应用不使用 Service Worker / getUserMedia；拍照通过 capture=environment 文件输入，请求手机系统相机，具体行为由设备决定。服务端来源检查、CSP、nosniff、请求限制和限速减少跨站/文件风险，不代替身份鉴权。
+The application does not use Service Worker or `getUserMedia`. Photography uses a `capture=environment` file input to request the phone's system camera; exact behavior depends on the device. Server-side origin checks, CSP, `nosniff`, request limits, and rate limits reduce cross-site/file risks but do not replace identity authentication.

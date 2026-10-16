@@ -1,13 +1,13 @@
-# 项目文档
+# Project Documentation
 
-| 主题 | 入口 |
+| Topic | Entry Point |
 | --- | --- |
-| 业务规则、数据与界面 | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| API 与错误处理 | [API.md](API.md) |
-| 安装、备份、恢复、诊断 | [OPERATIONS.md](OPERATIONS.md) |
-| 本机发布与回退 | [DEPLOYMENT.md](DEPLOYMENT.md) |
-| 验证与已知限制 | [VERIFICATION.md](VERIFICATION.md) |
+| Business rules, data, and UI | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| API and error handling | [API.md](API.md) |
+| Installation, backup, recovery, and diagnostics | [OPERATIONS.md](OPERATIONS.md) |
+| Local deployment and rollback | [DEPLOYMENT.md](DEPLOYMENT.md) |
+| Verification and known limitations | [VERIFICATION.md](VERIFICATION.md) |
 
-共享主机规则属于 agent-config 的 server-operations；服务器入口为 `/opt/AGENTS.md`，共享副本 `/opt/server-context`。项目公开仓库 `Crashmere/RecipeBox`，服务器副本在 `/opt/recipebox/AGENTS.md` 和 docs，SOURCE 记录文档来源，current-commit 记录程序来源。
+Shared-host rules belong to agent-config's server-operations. The server entry point is `/opt/AGENTS.md`, and the shared copy is `/opt/server-context`. The public project repository is `Crashmere/RecipeBox`; server copies are under `/opt/recipebox/AGENTS.md` and `docs`. `SOURCE` records the documentation source, while `current-commit` records the program source.
 
-日常发布与验证按 [本机发布说明](DEPLOYMENT.md) 执行；GitHub 只作源码备份。
+Follow [local deployment instructions](DEPLOYMENT.md) for routine deployment and validation. GitHub is only a source-code backup.

@@ -1,29 +1,31 @@
-# RecipeBox 维护入口
+# RecipeBox Maintenance Entry Point
 
-本项目为个人使用：在本地验证本次改动即可发布，不设全量回归门槛，不默认新增或保留永久测试。界面改动检查实际使用的电脑/手机场景；数据迁移、批量写入/删除和备份恢复先用隔离副本针对性验证。
+Write agent instructions, maintenance documentation, technical plans, handoffs, and similar agent-authored operational documents in English by default unless the user explicitly requests another language. User-facing product output follows the language requested by the user.
 
-GitHub 只备份源码和配置，推送不触发测试或部署。本机入口及回退见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)；共享流程由 server-operations 维护。
+This project is for personal use: validate the current change locally before release; there is no full-regression gate, and permanent tests are neither added nor retained by default. For UI changes, check the computer and phone scenarios that are actually used. Validate data migrations, bulk writes/deletions, and backup restoration specifically against an isolated copy first.
 
-先读 [docs/README.md](docs/README.md)，再按任务读取架构、API、运维和验证文档。
+GitHub backs up only source code and configuration; pushing does not trigger tests or deployment. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for local entry points and rollback; shared procedures are maintained by server-operations.
 
-- 家庭共享菜谱接入统一设备认证；授权设备可以查看、添加、修改、删除和导出。菜谱是主体，常备食品独立作为附属功能。
-- Go 内嵌 Vue + SQLite + libvips；服务器为正式数据源，不把浏览器草稿当成备份。
-- 记录写入使用 revision 和 Idempotency-Key。普通资料编辑不得清空下厨日记，消耗食品不得覆盖其他字段。
-- 照片不可变，数据库与照片一起备份。启动缺库必须报错，不得隐式初始化空库。
-- 测试使用 .local 隔离数据。生产只读验收，不导入虚构家庭菜谱。
-- 部署先读 server-operations，并显式读取 ssh ali 'cat /opt/AGENTS.md'。源码、部署配置与当前文档保持一致，推送后运行 agent-config 的 `skills/server-operations/scripts/sync-docs.sh RecipeBox` 同步服务器副本。
-- 哪些事直接做完再告知、哪些先确认，只看 server-operations SKILL.md 的授权表；文档维护与同步不需要事先确认。
-- 仓库 public，不提交正式数据库、照片、备份、凭据或服务器公网地址。
+Read [docs/README.md](docs/README.md) first, then read architecture, API, operations, and verification documentation as the task requires.
 
-## 门户资源同步
+- Family-shared recipes use shared device authentication. Authorized devices can view, add, modify, delete, and export. Recipes are the primary entity; pantry items are a separate supplementary feature.
+- Go embeds Vue and uses SQLite plus libvips. The server is the authoritative data source; browser drafts are not backups.
+- Record writes use `revision` and `Idempotency-Key`. Ordinary profile edits must not clear cooking logs, and consuming a pantry item must not overwrite other fields.
+- Photos are immutable, and the database and photos are backed up together. Startup must report a missing database as an error and must not initialize an empty database implicitly.
+- Tests use isolated `.local` data. Production acceptance is read-only and does not import fictional family recipes.
+- Before deployment, read server-operations and explicitly run `ssh ali 'cat /opt/AGENTS.md'`. Keep source, deployment configuration, and current documentation consistent, then, after pushing, run agent-config's `skills/server-operations/scripts/sync-docs.sh RecipeBox` to synchronize the server copies.
+- Use only the authorization table in server-operations `SKILL.md` to decide what to finish and report afterward versus what to confirm first. Documentation maintenance and synchronization do not require advance confirmation.
+- The repository is public. Do not commit the production database, photos, backups, credentials, or the server's public address.
 
-- 修改网站图标或认证时，同时核对 iPhone 的 apple-touch-icon、构建后路径及匿名 GET/HEAD；只允许明确的品牌图标/公开 manifest 例外，页面、API 和用户媒体仍须认证。统一排障与验收见 server-operations 的 common-issues；实际启用状态以 current-state 为准。
+## Portal Resource Synchronization
 
-- 本项目的 `deploy/portal.json` 是 ServerPortal 资源声明的维护源，记录目录用途、数据库、运行用户、端口、unit、访问路径、API 与备份类型。新增/迁移/删除数据根、接口或运行材料时，必须同步修改声明、对应 docs 与共享应用清单。
-- 声明部署在 `/opt/recipebox/config/portal.json`，root 管理；本机发布共用 server-operations 校验器，发布前预检，发布后通过受限 SSH 自动同步并核对门户加载哈希。`registry.d/recipebox.json` 自动登记链接，更新无需重启门户。
-- 统一认证由共享 Nginx 与门户负责，不在本项目另存设备白名单；本机调用和发布健康检查按共享约定保留。生产已启用设备认证；变更后同步 server-operations current-state。
-- 门户只读展示不替代本项目原生一致性备份；备份格式或媒体生命周期变化时，针对受影响的备份与恢复契约做隔离验证。真实业务数据、凭据和备份仍不得进入 Git。
+- When changing website icons or authentication, also check the iPhone `apple-touch-icon`, its post-build path, and anonymous GET/HEAD access. Only explicit brand icons and a public manifest may be exceptions; pages, APIs, and user media must remain authenticated. See server-operations common issues for shared troubleshooting and acceptance; current-state is authoritative for actual enablement status.
 
-本机发布自动预检和同步同提交的 `deploy/portal.json`；仅更新声明运行 `make portal`，保留业务程序版本。
+- This project's `deploy/portal.json` is the maintained source for the ServerPortal resource declaration. It records directory purposes, the database, runtime user, port, units, access paths, APIs, and backup types. When adding, migrating, or deleting a data root, interface, or runtime material, update the declaration, the corresponding docs, and the shared application inventory together.
+- The declaration is deployed to `/opt/recipebox/config/portal.json` and managed by root. Local deployment uses the shared server-operations validator: it performs a preflight before deployment, then automatically synchronizes over restricted SSH and verifies the hash loaded by the portal. `registry.d/recipebox.json` registers the link automatically; updates do not require restarting the portal.
+- Shared Nginx and the portal provide unified authentication; this project does not maintain a separate device allowlist. Local calls and deployment health checks remain available under the shared conventions. Device authentication is enabled in production; synchronize server-operations current-state after changes.
+- The portal's read-only display does not replace this project's native consistent backups. When backup formats or media lifecycles change, validate the affected backup and recovery contracts against an isolated copy. Real business data, credentials, and backups still must not enter Git.
 
-网页默认拦截 Tab / Shift+Tab 控件切换并取消焦点高亮；只保留用户明确要求的例外。维护与验证按 [server-operations 网页键盘与焦点约定](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/conventions.md#网页键盘与焦点) 执行。
+Local deployment automatically preflights and synchronizes the `deploy/portal.json` from the same commit. To update only the declaration, run `make portal`; this preserves the business-program version.
+
+Web pages block ordinary Tab / Shift+Tab control traversal and remove focus highlights by default; retain only exceptions explicitly requested by the user. Maintain and verify this behavior under the [server-operations web keyboard and focus conventions](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/conventions.md#web-keyboard-and-focus).
