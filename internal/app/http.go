@@ -159,7 +159,7 @@ func (s *Store) Handler(assets fs.FS) http.Handler {
 			return e
 		}
 		for _, record := range records {
-			for _, id := range record.PhotoIDs {
+			for _, id := range record.AllPhotoIDs() {
 				src, e := os.Open(filepath.Join(s.Dir, "media", id+".jpg"))
 				if e != nil {
 					return e

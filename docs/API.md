@@ -26,7 +26,7 @@ The JSON body of `POST /api/records/{id}` always includes the current `revision`
 | `save` (default) | Full profile; preserves the original `kind`, creation time, and cooking logs. Omitted editable fields use their zero values; this is not a partial update |
 | `favorite` | Boolean `favorite`; only recipes can be favorited |
 | `consume` | Decrement a pantry item's `quantity` by one; no stock or the wrong kind returns 409 |
-| `log` | `log={id?,date,note,rating}`; recipes only; without `id`, add a log; with `id`, update the existing log |
+| `log` | `log={id?,date,note,rating,photoIds?}`; recipes only; without `id`, add a log; with `id`, update the existing log. Up to 10 photos per log; omitting `photoIds` on update preserves existing photos, while `[]` removes them |
 | `remove_log` | `log.id` selects the cooking log to delete |
 | `delete` | Soft-delete into the recycle bin |
 | `restore` | Restore a record deleted within 30 days; a non-deleted record returns 409 and an expired record returns 410 |
@@ -34,5 +34,7 @@ The JSON body of `POST /api/records/{id}` always includes the current `revision`
 Every successful action increments `revision` and returns the complete Record. Initial creation can use only `save`, and an existing record cannot change `kind`. JSON forms are limited to 256 KiB and reject unknown fields and trailing JSON. Uploads support JPEG, PNG, WebP, HEIC, and HEIF. Media has the shape `{id,width,height,bytes,createdAt}`. A staged photo must be attached to a record within 24 hours, and one photo can belong to only one record. Variants other than `main`/`thumb`, removed photos, photos on deleted records, and expired staged photos all return 404.
 
 A record contains `id`/`kind`/`revision`/`name`/`category`/`notes`/`tags`/`ingredients`/`steps`/`minutes`/`servings`/`favorite`/`logs`/`photoIds`/`quantity`/`unit`/`location`/`purchaseDate`/`expiryDate`/`createdAt`/`updatedAt`/`deletedAt`. Canonical definitions are in `internal/app/model.go` and `web/src/types.ts`.
+
+Cooking-log photos use the same upload and media endpoints as profile photos, and belong to the containing record. Logs without photos may omit `photoIds`, including existing logs stored before photo support. A profile save preserves all cooking-log photo references. Removing a photo or log makes a photo unavailable only when no other profile or log reference remains. ZIP export includes both kinds of photos without duplicate entries.
 
 Application errors are JSON `{code,message}`: 400 for format/submission-key errors; 403 for origin; 404 for missing resources; 409 for version conflict, key reuse, or no stock; 410 for an expired restore window; 413 for size; 415 for format; 422 for content validation/image decoding; 429 for busy/rate limit; 500 for internal errors; and 507 for capacity. The shared public entry point returns 401 for authentication failure. Per IP, write operations are limited to 120 per minute and uploads separately to 30; only `X-Real-IP` from a loopback proxy is accepted. No response does not mean the operation was not committed: query the original key or retry the original bytes. After a write has no response for 3 seconds, the web page automatically queries the original key. Operation results are retained by maintenance for about 7 days; an older unknown submission must not be retried automatically.

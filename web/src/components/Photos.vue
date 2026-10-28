@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onBeforeUnmount, watch } from "vue";
-import { api, media, uid } from "../api";
+import { media, uid } from "../api";
 import Modal from "./Modal.vue";
 import Icon from "./Icon.vue";
-const props = defineProps<{ modelValue: string[] }>();
+const props = defineProps<{ modelValue: string[]; cooking?: boolean }>();
 const emit = defineEmits<{
   "update:modelValue": [string[]];
   busy: [boolean];
@@ -104,10 +104,18 @@ onBeforeUnmount(() =>
           aria-label="预览照片"
           @click="preview = media(id)"
         >
-          <img :src="media(id, true)" alt="菜谱照片" /></button
-        ><span class="cover-tag" v-if="i === 0">封面</span>
+          <img
+            :src="media(id, true)"
+            :alt="cooking ? '下厨照片' : '菜谱照片'"
+          /></button
+        ><span class="cover-tag" v-if="!cooking && i === 0">封面</span>
         <div class="photo-actions">
-          <button type="button" @click="move(i)" :disabled="i === 0">
+          <button
+            v-if="!cooking"
+            type="button"
+            @click="move(i)"
+            :disabled="i === 0"
+          >
             设为封面</button
           ><button
             type="button"
@@ -143,7 +151,13 @@ onBeforeUnmount(() =>
     <div class="upload-zone" v-if="modelValue.length + pending.length < 10">
       <Icon name="image" :size="30" />
       <p>
-        {{ modelValue.length ? "再留下一张美味瞬间" : "给这道菜留一张照片" }}
+        {{
+          modelValue.length
+            ? "再留下一张美味瞬间"
+            : cooking
+              ? "给这次下厨留一张照片"
+              : "给这道菜留一张照片"
+        }}
       </p>
       <div class="button-row">
         <button

@@ -34,10 +34,11 @@ type Ingredient struct {
 	Amount string `json:"amount"`
 }
 type CookLog struct {
-	ID     string `json:"id"`
-	Date   string `json:"date"`
-	Note   string `json:"note"`
-	Rating int    `json:"rating"`
+	ID       string   `json:"id"`
+	Date     string   `json:"date"`
+	Note     string   `json:"note"`
+	Rating   int      `json:"rating"`
+	PhotoIDs []string `json:"photoIds,omitempty"`
 }
 type Media struct {
 	ID        string `json:"id"`
@@ -108,12 +109,8 @@ func (r *Record) Validate() error {
 	if r.PurchaseDate != "" && r.ExpiryDate != "" && r.ExpiryDate < r.PurchaseDate {
 		return fail(422, "date", "到期日期不能早于购买日期")
 	}
-	seen := map[string]bool{}
-	for _, id := range r.PhotoIDs {
-		if !idPattern.MatchString(id) || seen[id] {
-			return fail(422, "photos", "照片编号无效或重复")
-		}
-		seen[id] = true
+	if e := validatePhotoIDs(r.PhotoIDs); e != nil {
+		return e
 	}
 	ingredients := []Ingredient{}
 	for _, i := range r.Ingredients {
@@ -141,7 +138,7 @@ func (r *Record) Validate() error {
 	}
 	r.Steps = steps
 	tags := []string{}
-	seen = map[string]bool{}
+	seen := map[string]bool{}
 	for _, t := range r.Tags {
 		t = strings.TrimSpace(t)
 		if utf8.RuneCountInString(t) > 40 {
@@ -168,5 +165,38 @@ func (l *CookLog) Validate() error {
 	if l.ID != "" && !idPattern.MatchString(l.ID) {
 		return fail(422, "log", "无效的下厨记录编号")
 	}
+	if len(l.PhotoIDs) > 10 {
+		return fail(422, "photos", "每次下厨最多 10 张照片")
+	}
+	return validatePhotoIDs(l.PhotoIDs)
+}
+
+func validatePhotoIDs(ids []string) error {
+	seen := map[string]bool{}
+	for _, id := range ids {
+		if !idPattern.MatchString(id) || seen[id] {
+			return fail(422, "photos", "照片编号无效或重复")
+		}
+		seen[id] = true
+	}
 	return nil
+}
+
+// A photo stays attached while the profile or any cooking log references it.
+func (r Record) AllPhotoIDs() []string {
+	ids := []string{}
+	seen := map[string]bool{}
+	add := func(photos []string) {
+		for _, id := range photos {
+			if !seen[id] {
+				ids = append(ids, id)
+				seen[id] = true
+			}
+		}
+	}
+	add(r.PhotoIDs)
+	for _, l := range r.Logs {
+		add(l.PhotoIDs)
+	}
+	return ids
 }

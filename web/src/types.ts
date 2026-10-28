@@ -7,6 +7,7 @@ export interface CookLog {
   date: string;
   note: string;
   rating: number;
+  photoIds?: string[];
 }
 export interface Entry {
   id: string;

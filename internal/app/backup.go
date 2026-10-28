@@ -98,7 +98,12 @@ func (s *Store) Check(ctx context.Context) error {
 			if e = r.Validate(); e != nil {
 				return fmt.Errorf("invalid record %s: %w", r.ID, e)
 			}
-			for _, id := range r.PhotoIDs {
+			for _, l := range r.Logs {
+				if e = l.Validate(); e != nil {
+					return fmt.Errorf("invalid cooking log for record %s: %w", r.ID, e)
+				}
+			}
+			for _, id := range r.AllPhotoIDs() {
 				var n int
 				if e = s.DB.QueryRowContext(ctx, "SELECT count(*) FROM media WHERE id=? AND record_id=? AND removed_at IS NULL", id, r.ID).Scan(&n); e != nil {
 					return e

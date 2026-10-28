@@ -212,6 +212,9 @@ func apply(ctx context.Context, tx *sql.Tx, id, key, fp string, in WriteInput) (
 			found := false
 			for i := range r.Logs {
 				if r.Logs[i].ID == l.ID {
+					if l.PhotoIDs == nil {
+						l.PhotoIDs = r.Logs[i].PhotoIDs
+					}
 					r.Logs[i] = l
 					found = true
 				}
@@ -249,8 +252,10 @@ func apply(ctx context.Context, tx *sql.Tx, id, key, fp string, in WriteInput) (
 	}
 	r.Revision = rev + 1
 	r.UpdatedAt = now()
-	if action == "save" {
-		for _, mid := range r.PhotoIDs {
+	syncPhotos := action == "save" || action == "log" || action == "remove_log"
+	photoIDs := r.AllPhotoIDs()
+	if syncPhotos {
+		for _, mid := range photoIDs {
 			var owner, removed sql.NullString
 			var created string
 			e = tx.QueryRowContext(ctx, "SELECT record_id,removed_at,created_at FROM media WHERE id=?", mid).Scan(&owner, &removed, &created)
@@ -268,11 +273,11 @@ func apply(ctx context.Context, tx *sql.Tx, id, key, fp string, in WriteInput) (
 	if e != nil {
 		return nil, e
 	}
-	if action == "save" {
+	if syncPhotos {
 		if _, e = tx.ExecContext(ctx, "UPDATE media SET removed_at=? WHERE record_id=? AND removed_at IS NULL", r.UpdatedAt, r.ID); e != nil {
 			return nil, e
 		}
-		for _, mid := range r.PhotoIDs {
+		for _, mid := range photoIDs {
 			if _, e = tx.ExecContext(ctx, "UPDATE media SET record_id=?,removed_at=NULL WHERE id=?", r.ID, mid); e != nil {
 				return nil, e
 			}

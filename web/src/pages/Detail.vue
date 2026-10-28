@@ -5,6 +5,7 @@ import { api, media, write, notify } from "../api";
 import { type Entry, type CookLog, today } from "../types";
 import Icon from "../components/Icon.vue";
 import Modal from "../components/Modal.vue";
+import Photos from "../components/Photos.vue";
 const route = useRoute(),
   router = useRouter();
 const entry = ref<Entry | null>(null),
@@ -14,9 +15,15 @@ const entry = ref<Entry | null>(null),
   preview = ref(""),
   confirmDelete = ref(false),
   logOpen = ref(false),
-  logError = ref(""),
+  photosBusy = ref(false),
   removeLog = ref<CookLog | null>(null);
-const log = ref<CookLog>({ id: "", date: today(), note: "", rating: 0 });
+const log = ref<CookLog & { photoIds: string[] }>({
+  id: "",
+  date: today(),
+  note: "",
+  rating: 0,
+  photoIds: [],
+});
 const operationError = ref("");
 const checked = ref<number[]>([]),
   cooking = ref(false),
@@ -58,12 +65,15 @@ async function mutate(action: string, extra: object = {}) {
   }
 }
 function openLog(l?: CookLog) {
-  log.value = l ? { ...l } : { id: "", date: today(), note: "", rating: 0 };
-  logError.value = "";
+  log.value = l
+    ? { ...l, photoIds: [...(l.photoIds || [])] }
+    : { id: "", date: today(), note: "", rating: 0, photoIds: [] };
+  photosBusy.value = false;
   operationError.value = "";
   logOpen.value = true;
 }
 async function saveLog() {
+  if (photosBusy.value) return;
   if (await mutate("log", { log: log.value })) {
     logOpen.value = false;
     notify("下厨的这一刻，记下了");
@@ -231,6 +241,23 @@ async function trash() {
                   >
                 </div>
                 <p v-if="l.note">{{ l.note }}</p>
+                <div v-if="l.photoIds?.length" class="log-photos">
+                  <button
+                    v-for="(id, i) in l.photoIds"
+                    :key="id"
+                    type="button"
+                    :aria-label="'查看 ' + l.date + ' 下厨照片 ' + (i + 1)"
+                    @click="preview = media(id)"
+                  >
+                    <img
+                      :src="media(id, true)"
+                      :alt="
+                        entry.name + ' · ' + l.date + ' 下厨照片 ' + (i + 1)
+                      "
+                      loading="lazy"
+                    />
+                  </button>
+                </div>
                 <div class="log-actions">
                   <button class="text-btn" @click="openLog(l)">修改</button
                   ><button class="text-btn muted" @click="removeLog = l">
@@ -253,48 +280,65 @@ async function trash() {
     ><Modal
       v-if="logOpen"
       :title="log.id ? '修改下厨记录' : '今天，又做了这道菜'"
-      @close="!busy && (logOpen = false)"
+      @close="!busy && !photosBusy && (logOpen = false)"
       ><form @submit.prevent="saveLog">
         <p v-if="operationError" class="notice error" role="alert">
           {{ operationError }}
         </p>
-        <label class="field"
-          >下厨日期<span class="date-input"
-            ><input type="date" required v-model="log.date" /></span
-        ></label>
-        <fieldset class="rating-field">
-          <legend>这次味道怎么样？<span class="muted">选填</span></legend>
-          <div class="rating-buttons">
-            <button
-              v-for="n in 5"
-              type="button"
-              :aria-label="n + ' 星'"
-              :aria-pressed="log.rating === n"
-              :class="{ selected: log.rating >= n }"
-              @click="log.rating = log.rating === n ? 0 : n"
+        <fieldset class="log-fields" :disabled="busy">
+          <label class="field"
+            >下厨日期<span class="date-input"
+              ><input type="date" required v-model="log.date" /></span
+          ></label>
+          <fieldset class="rating-field">
+            <legend>这次味道怎么样？<span class="muted">选填</span></legend>
+            <div class="rating-buttons">
+              <button
+                v-for="n in 5"
+                type="button"
+                :aria-label="n + ' 星'"
+                :aria-pressed="log.rating === n"
+                :class="{ selected: log.rating >= n }"
+                @click="log.rating = log.rating === n ? 0 : n"
+              >
+                <Icon name="star" :size="29" />
+              </button>
+            </div>
+          </fieldset>
+          <label class="field"
+            >下厨心得<textarea
+              v-model="log.note"
+              rows="4"
+              maxlength="4000"
+              placeholder="今天少放了点盐，家里人都说刚刚好…"
+            />
+          </label>
+          <section class="photo-field" aria-labelledby="log-photo-label">
+            <span id="log-photo-label"
+              >这次下厨的照片 <span class="muted">选填</span></span
             >
-              <Icon name="star" :size="29" />
-            </button>
-          </div>
+            <Photos
+              v-model="log.photoIds"
+              cooking
+              @busy="photosBusy = $event"
+            />
+          </section>
+          <p v-if="photosBusy" class="muted small" role="status">
+            照片上传成功后再保存；上传失败可以重试或移除。
+          </p>
         </fieldset>
-        <label class="field"
-          >下厨心得<textarea
-            v-model="log.note"
-            rows="4"
-            maxlength="4000"
-            placeholder="今天少放了点盐，家里人都说刚刚好…"
-          />
-        </label>
         <div class="modal-actions">
           <button
             type="button"
             class="btn secondary"
             @click="logOpen = false"
-            :disabled="busy"
+            :disabled="busy || photosBusy"
           >
             取消</button
-          ><button class="btn primary" :disabled="busy">
-            {{ busy ? "保存中…" : "保存这次下厨" }}
+          ><button class="btn primary" :disabled="busy || photosBusy">
+            {{
+              busy ? "保存中…" : photosBusy ? "等待照片上传…" : "保存这次下厨"
+            }}
           </button>
         </div>
       </form></Modal
@@ -323,7 +367,10 @@ async function trash() {
       ><p v-if="operationError" class="notice error" role="alert">
         {{ operationError }}
       </p>
-      <p>仅删除 {{ removeLog.date }} 的这次心得，不影响菜谱。</p>
+      <p>
+        仅删除
+        {{ removeLog.date }} 的这次下厨记录及照片，不影响菜谱和其他下厨记录。
+      </p>
       <div class="modal-actions">
         <button class="btn secondary" @click="removeLog = null">取消</button
         ><button
