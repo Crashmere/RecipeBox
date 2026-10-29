@@ -1,0 +1,22 @@
+[Unit]
+Description=RecipeBox business data cleanup on NAS
+ConditionPathExists=/etc/server-maintenance-host
+After=systemd-tmpfiles-setup.service
+
+[Service]
+Type=oneshot
+User=recipebox
+Group=recipebox
+ExecCondition=/usr/bin/grep -qx nas /etc/server-maintenance-host
+# The NAS foundation creates root-owned locks that runtime users open read-only.
+ExecStart=/usr/bin/flock --shared /run/lock/server-maintenance.lock /usr/bin/flock --exclusive /run/lock/recipebox-deploy.lock /opt/recipebox/bin/recipebox cleanup --data /opt/recipebox/data
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/recipebox/data
+MemoryMax=256M
+CPUQuota=50%
+Nice=10
+TimeoutStartSec=15min

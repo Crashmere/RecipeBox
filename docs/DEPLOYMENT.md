@@ -27,6 +27,8 @@ Use the restricted `recipebox-deploy` identity; its private key exists only on t
 
 Switching begins only after upload and verification succeed. On `nas`, the shared helper cold-copies complete data/config/program state, including recipe and cooking-log media, to root-private `/var/lib/server-upgrades/recipebox/<release>/`. Candidate checks use an independent copy. Successful runtime and previous SQLite-row/file preservation checks immediately delete only this upgrade's local recovery copy; failure or uncertainty retains it. `previous` remains the program rollback artifact. Normal deployments do not transfer production data. Administrators install units, Nginx, env, authorization, and scripts from source; documentation uses `SYNC_HOST=nas` with the shared `sync-docs.sh`.
 
+`recipebox-cleanup.service`/`.timer` are separately installed runtime configuration and must be registered in `deploy/portal.json`. Only a host marked `nas` enables cleanup scheduling; the native backup timer remains disabled. A program-only deployment does not install or change these units. During existing-data migration, install the reviewed units without running `init`, and verify their lock/sandbox contract before authorized activation; see [OPERATIONS.md](OPERATIONS.md).
+
 ## Rollback and Troubleshooting
 
 ```sh

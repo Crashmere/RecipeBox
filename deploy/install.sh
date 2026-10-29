@@ -11,6 +11,16 @@ fi
 if [[ $EUID -ne 0 || $# -ne 1 ]]; then
   echo 'Usage: sudo bash deploy/install.sh <linux-binary>' >&2; exit 64
 fi
+nas=false
+if [[ -r /etc/server-maintenance-host && $(< /etc/server-maintenance-host) == nas ]]; then
+  nas=true
+  for lock in /run/lock/server-maintenance.lock /run/lock/recipebox-deploy.lock; do
+    if [[ ! -f $lock || $(stat -c '%u:%g:%a' "$lock") != 0:0:644 ]]; then
+      echo 'Prepare the root-owned NAS maintenance tmpfiles locks before installing this application.' >&2
+      exit 1
+    fi
+  done
+fi
 binary=$(realpath "$1")
 scripts=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 if [[ -e /opt/recipebox || -e /etc/systemd/system/recipebox.service ]] || id recipebox >/dev/null 2>&1; then
@@ -23,13 +33,15 @@ useradd --system --home-dir /opt/recipebox --shell /usr/sbin/nologin recipebox
 install -d -m 0755 /opt/recipebox /opt/recipebox/bin /opt/recipebox/config /opt/recipebox/docs /opt/recipebox/releases
 install -d -m 0700 -o recipebox -g recipebox /opt/recipebox/data /opt/recipebox/backups
 install -m 0755 "$binary" /opt/recipebox/bin/recipebox
-install -m 0644 "$scripts/nginx-location.conf" "$scripts/recipebox.service" "$scripts/recipebox-backup.service" "$scripts/recipebox-backup.timer" /opt/recipebox/config/
+install -m 0644 "$scripts/nginx-location.conf" "$scripts/recipebox.service" "$scripts/recipebox-backup.service" "$scripts/recipebox-backup.timer" "$scripts/recipebox-cleanup.service" "$scripts/recipebox-cleanup.timer" /opt/recipebox/config/
 runuser -u recipebox -- /opt/recipebox/bin/recipebox init --data /opt/recipebox/data
-systemctl link /opt/recipebox/config/recipebox.service /opt/recipebox/config/recipebox-backup.service /opt/recipebox/config/recipebox-backup.timer
+systemctl link /opt/recipebox/config/recipebox.service /opt/recipebox/config/recipebox-backup.service /opt/recipebox/config/recipebox-backup.timer /opt/recipebox/config/recipebox-cleanup.service /opt/recipebox/config/recipebox-cleanup.timer
 systemctl daemon-reload
 systemctl enable --now recipebox.service
 if [[ ${ENABLE_APP_BACKUP_TIMER:-false} == true ]]; then systemctl enable --now recipebox-backup.timer;
 else systemctl disable --now recipebox-backup.timer; fi
+if [[ $nas == true ]]; then systemctl enable --now recipebox-cleanup.timer;
+else systemctl disable --now recipebox-cleanup.timer; fi
 curl --fail --silent --retry 10 --retry-delay 1 --retry-connrefused http://127.0.0.1:18083/healthz
 if [[ ${ENABLE_APP_BACKUP_TIMER:-false} == true ]]; then systemctl start recipebox-backup.service; fi
 echo 'RecipeBox installed. Add its Nginx location after local health verification.'

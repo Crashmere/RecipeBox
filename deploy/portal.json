@@ -11,7 +11,9 @@
   "units": [
     "recipebox.service",
     "recipebox-backup.service",
-    "recipebox-backup.timer"
+    "recipebox-backup.timer",
+    "recipebox-cleanup.service",
+    "recipebox-cleanup.timer"
   ],
   "database": "/opt/recipebox/data/recipebox.db",
   "backupKind": "media",

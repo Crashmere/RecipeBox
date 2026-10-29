@@ -8,9 +8,15 @@ Image sizes: Nginx permits requests up to 26 MiB, and the program permits each i
 
 ## Layout
 
-`/opt/recipebox/bin/recipebox` is the Linux amd64 program with embedded pages. `config` contains this project's units/location; `data` contains `recipebox.db`, `media`, and `tmp`; `backups` contains snapshots; `docs` and `AGENTS.md` are controlled documentation copies; `releases` retains deployment history; and `current-commit` identifies the program source.
+`/opt/recipebox/bin/recipebox` is the Linux amd64 program with embedded pages. `config` contains this project's units/location; `data` contains `recipebox.db`, `media`, and `tmp`; `backups` preserves legacy native snapshots without NAS scheduling; `docs` and `AGENTS.md` are controlled documentation copies; `releases` retains program history without NAS scheduled pruning; and `current-commit` identifies the program source. NAS upgrade protection instead lives in root-private `/var/lib/server-upgrades/recipebox/<release>/`.
 
 The runtime identity is `recipebox`, and the deployment identity is `recipebox-deploy`. `data`/`backups` use 0700 and files use 0600; root manages programs and configuration. The service listens on `127.0.0.1:18083` and is reached through shared Nginx under `/recipebox/`, without adding a public listening port. systemd limits writes to `data`, memory to 640 MiB, and CPU to 100%.
+
+## Application Cleanup
+
+The NAS migration separates existing application cleanup from the disabled native daily backup job. Its dedicated units are `recipebox-cleanup.service` and `recipebox-cleanup.timer`; scheduling is enabled only on a host marked `nas`. The timer retains 03:45 Asia/Shanghai with up to five minutes of randomized delay and persistent catch-up. The [shared inventory](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md) records actual installation and activation.
+
+The cleanup service runs `recipebox cleanup --data /opt/recipebox/data` as `recipebox`, with writes limited to `data`, a 256 MiB memory limit, 50% CPU quota, Nice 10, and a 15-minute timeout. It takes the shared maintenance lock, then the exclusive application deployment lock before applying the existing deleted-record/media/operation cleanup rules. Shared `/etc/tmpfiles.d/server-maintenance.conf` prepares these root-owned 0644 lock files before the units run. Portal registers these maintenance units so full cold backups coordinate their writer pause with the same locks. This operation generates no snapshot and prunes no backup or release material; native backup timers remain disabled on NAS.
 
 ## Initial Installation
 
@@ -44,10 +50,12 @@ To test an empty database, create another uniquely named directory; do not clear
 
 NAS routine backups are manual complete compressed archives on an explicitly identified external volume through Portal or the agent. Pause business/background services, cold-copy all data/config/program state including recipe and cooking-log media to external staging, resume previously running services, then compress and verify the immutable copy. No routine stage/archive, native daily timer, or automatic backup deletion runs on NAS. The verified 2026-09-27 maintenance-computer archive and independent ALI Cloud Backup remain preserved in shared current-state.
 
+Native compatibility checks use an isolated data copy:
+
 ```sh
 systemctl status recipebox-backup.timer
 journalctl -u recipebox-backup.service -n 50 --no-pager
-runuser -u recipebox -- /opt/recipebox/bin/recipebox backup --data /opt/recipebox/data --out /opt/recipebox/backups/manual-UNIQUE
+runuser -u recipebox -- /opt/recipebox/bin/recipebox backup --data /path/to/isolated-data --out /path/to/new-native-snapshot
 ```
 
 The native command remains for old packages and isolated checks: consistent SQLite, photo hard links, and a SHA-256 manifest. Its destination must not exist; lock conflicts fail. Native packages are not the NAS full-state job. Do not copy an active WAL main file or modify hard-linked photos. A native restore requires a completed `manifest.json`.
