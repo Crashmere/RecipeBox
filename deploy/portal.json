@@ -29,16 +29,16 @@
       "id": "backups",
       "name": "数据备份",
       "path": "/opt/recipebox/backups",
-      "purpose": "每日快照保留 14 份；发布前快照保留最近 5 份及受保护版本对应快照；手工备份不自动清理。",
+      "purpose": "nas 的日常备份由门户或 agent 手动写入外置盘，采用全量压缩归档；本目录中的历史原生材料不自动清理。升级临时全量副本由 /var/lib/server-upgrades 管理，运行和数据验证成功后立即删除，失败或未确认时保留。",
       "kind": "backups",
       "browse": true,
-      "cleanup": true
+      "cleanup": false
     },
     {
       "id": "releases",
       "name": "部署版本",
       "path": "/opt/recipebox/releases",
-      "purpose": "保留最近 3 次成功发布和当前运行版本；已确认恢复的失败批次在后续成功发布且超过 7 天后清理。",
+      "purpose": "程序版本和发布结果用于回退与排查；nas 不做定时轮转，失败批次保留恢复记录，清理前由 agent 确认具体范围。",
       "kind": "releases",
       "browse": true,
       "cleanup": true

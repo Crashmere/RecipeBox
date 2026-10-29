@@ -6,6 +6,8 @@ GitHub is only a backup of source code and configuration, and Actions is disable
 
 ## Routine Use
 
+`make deploy` targets `nas` and its dedicated deployment key. `vps` provides public HTTPS on port 8443; temporary `ali` access forwards to the same NAS application. Public-check overrides and host-specific keys are maintained in the shared release guide. Explicit legacy ALI deployment must not create a second writer after migration.
+
 ```sh
 # Exercise the current feature locally, then commit and push the source.
 git add <files-changed-in-this-task>
@@ -23,7 +25,7 @@ Use `make portal` to update only portal information. It preflights and synchroni
 
 Use the restricted `recipebox-deploy` identity; its private key exists only on the maintenance computer. For initial account setup, use `deploy/setup-deploy.sh <local-deployment-public-key>`; do not initialize an existing account again. The forced command accepts only `deploy`, `portal-check`, and `portal`, and sudo permits only this application's fixed deployment script.
 
-Switching begins only after upload completion and successful verification. Preserve the pre-upgrade backup and `previous`, and restore the old program if health checks fail. Normal deployments do not carry production data. An administrator explicitly synchronizes units, Nginx, env, authorization, and deployment scripts from source; documentation uses the shared `sync-docs.sh`.
+Switching begins only after upload and verification succeed. On `nas`, the shared helper cold-copies complete data/config/program state, including recipe and cooking-log media, to root-private `/var/lib/server-upgrades/recipebox/<release>/`. Candidate checks use an independent copy. Successful runtime and previous SQLite-row/file preservation checks immediately delete only this upgrade's local recovery copy; failure or uncertainty retains it. `previous` remains the program rollback artifact. Normal deployments do not transfer production data. Administrators install units, Nginx, env, authorization, and scripts from source; documentation uses `SYNC_HOST=nas` with the shared `sync-docs.sh`.
 
 ## Rollback and Troubleshooting
 
@@ -36,4 +38,4 @@ Rollback reuses a retained, verified local artifact and still performs backup an
 
 Cooking-log photos add an optional field to existing record JSON without a schema migration. Once logs contain photos, releases predating this feature cannot safely manage their references: editing a log or saving its recipe can detach or discard them. Use a release that understands cooking-log photos for rollback of a populated database.
 
-The server retains program, `previous`, `metadata`, `result`, and `recovery` under `/opt/recipebox/releases/`; `current-commit` records the actual running source. `.local/releases/<commit>/last-deployment.json` records the local deployment result. An upload failure normally occurs before the service is stopped; for a failure after switching, inspect `result` and the journal first. Server deployment history and ordinary pre-deployment snapshots are automatically rotated under [automatic retention of deployment materials](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/retention.md). Local builds, `manual` and migration backups, and portal export packages are excluded.
+NAS retains the program, `previous`, metadata, result/recovery, and upgrade-acceptance evidence under `/opt/recipebox/releases/`; `current-commit` records the actual running source. `.local/releases/<commit>/last-deployment.json` records the local result. After a failed switch, inspect the result, journal, and retained private snapshot. NAS does not automatically prune uncertain upgrade copies. [Legacy automatic retention](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/retention.md) applies to `ali`, not the NAS recovery namespace.

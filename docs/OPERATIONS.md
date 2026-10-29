@@ -2,7 +2,7 @@
 
 The public entry point uses HTTPS with a trusted IP certificate, preserving the existing `/recipebox/` path. Public HTTP returns 308; API clients use HTTPS directly. Nginx overwrites `X-Forwarded-Proto`; write-origin validation trusts proxy headers only from loopback addresses and still rejects cross-site origins. See [shared HTTPS operations](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/https.md) (server copy: `/opt/server-context/references/https.md`) for certificates, renewal, rollback, and whole-server acceptance. This project's backend and deployment checks retain local HTTP. The proxy-inspection entry point at `127.0.0.1:80` is not publicly reachable. Public access uses ServerPortal's shared device authentication: enter the passphrase at `/portal/login` to authorize a device, then use the same-origin Secure/HttpOnly Cookie. Unauthorized APIs return 401. Local deployment checks and service-to-service calls remain available.
 
-Before operating `ali`, load server-operations and explicitly read `/opt/AGENTS.md`. Do not record the real public address in the public repository; obtain live information through the trusted SSH alias.
+RecipeBox's application target is `nas`; `vps` exposes public HTTPS port 8443 and temporary `ali` access forwards to the same instance. NAS provides local-CA HTTPS for home devices. Read server-operations and the target's remote `/opt/AGENTS.md`; current-state records activation. Keep addresses in trusted SSH configuration, not this public repository.
 
 Image sizes: Nginx permits requests up to 26 MiB, and the program permits each image up to 25 MiB. If an image over 1 MiB returns 500 before reaching the program, see [shared authentication incorrectly blocks large requests](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#shared-authentication-incorrectly-blocks-large-requests). The shared fix preserves this application's upload limit.
 
@@ -25,7 +25,7 @@ nginx -t
 systemctl reload nginx
 ```
 
-`install` refuses to overwrite existing directories/identities, explicitly initializes an empty production database, starts the service and backup timer, and obtains the first backup. Do not put test records in the production database. After installation, check direct and proxied access for all four services, deep links, and assets.
+`install` refuses existing directories/identities, explicitly initializes an empty database, starts the service, and leaves native backup scheduling disabled by default. It is not a migration importer; migration instead transfers verified complete cold state while the old service is paused. Do not put test records in production. Check direct/proxied health, deep links, and assets after installation.
 
 ## Local Development and Browser Verification
 
@@ -42,16 +42,15 @@ To test an empty database, create another uniquely named directory; do not clear
 
 ## Backup and Recovery
 
-Run daily at 03:45 Asia/Shanghai with a randomized delay of 0–5 minutes, retaining 14 `daily` backups. The backup unit's writable directory must be all of `/opt/recipebox`; see [photo hard-link backups fail in a systemd sandbox](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#photo-hard-link-backups-fail-in-a-systemd-sandbox) for the reason. A backup contains a consistent SQLite snapshot, photo hard links, and a SHA-256 manifest. `before-deploy` rotates under the shared deployment-retention policy; `manual` is not cleaned automatically. On 2026-09-27, an all-application archive containing this project's database and photos was separately downloaded to the maintenance computer and verified; see the [shared backup description](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md#manual-data-archives). This application's scripts do not proactively synchronize off-host. The server separately uses Alibaba Cloud file backup; see [host cloud backup](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md#cloud-backup) for its scope, 30-day retention, and recovery limits.
+NAS routine backups are manual complete compressed archives on an explicitly identified external volume through Portal or the agent. Pause business/background services, cold-copy all data/config/program state including recipe and cooking-log media to external staging, resume previously running services, then compress and verify the immutable copy. No routine stage/archive, native daily timer, or automatic backup deletion runs on NAS. The verified 2026-09-27 maintenance-computer archive and independent ALI Cloud Backup remain preserved in shared current-state.
 
 ```sh
 systemctl status recipebox-backup.timer
-systemctl start recipebox-backup.service
 journalctl -u recipebox-backup.service -n 50 --no-pager
 runuser -u recipebox -- /opt/recipebox/bin/recipebox backup --data /opt/recipebox/data --out /opt/recipebox/backups/manual-UNIQUE
 ```
 
-The backup destination directory must not exist. Retry later on a lock conflict. Do not directly copy the active WAL main file or modify hard-linked photos. Only a directory with a complete `manifest.json` may be restored.
+The native command remains for old packages and isolated checks: consistent SQLite, photo hard links, and a SHA-256 manifest. Its destination must not exist; lock conflicts fail. Native packages are not the NAS full-state job. Do not copy an active WAL main file or modify hard-linked photos. A native restore requires a completed `manifest.json`.
 
 ```sh
 recipebox restore --source /path/to/backup --out /path/to/new-restore-directory
@@ -60,7 +59,7 @@ recipebox check --data /path/to/new-restore-directory
 recipebox serve --data /path/to/new-restore-directory --listen 127.0.0.1:19083 --with-prefix
 ```
 
-`restore` verifies hashes and relative paths, rejects an existing target, and copies photos into independent files. Before production recovery, confirm the recovery point and possible loss of later changes, stop this application, preserve the current directory, restore into a new directory, verify it, then switch identity/path and restart for validation. Program rollback is not database rollback.
+The native `restore` verifies hashes/relative paths and copies photos independently into a new target. Full NAS cold archives are instead extracted and verified in an isolated directory before the agent restores the complete application subtree. Confirm the recovery point and later data loss; stop writes, preserve current state, set ownership, and restart for read-only validation. Keep NAS native scheduling disabled. Program rollback is not database restoration.
 
 ## Diagnostics
 
@@ -83,7 +82,7 @@ journalctl -u recipebox --since '-1h' --no-pager | grep ' write '
 
 For a missing or damaged database, inspect backups and permissions; do not use `init` to create an empty database and conceal the error. For 507, check root-disk and photo quotas; for 429, check the backup lock and concurrent uploads; for 422, check image format and vips logs. libvips 8.15 and 8.18 both use `--export-profile=srgb`.
 
-After committing and pushing documentation, run `~/agent-config/skills/server-operations/scripts/sync-docs.sh RecipeBox`. It handles drift checks, installation under `/opt/recipebox`, per-file verification, `docs/SOURCE`, and cleanup; see server-operations maintenance for usage. After changing the shared inventory, run the same script without arguments.
+After pushing managed documentation, run `SYNC_HOST=nas ~/agent-config/skills/server-operations/scripts/sync-docs.sh RecipeBox`; it verifies drift/files and records `docs/SOURCE`. Shared gateway context synchronizes to its own hosts.
 
 ## ServerPortal Integration Materials
 
@@ -95,7 +94,7 @@ Source-code or database-behavior changes cannot use this option as a substitute 
 
 When data roots, media, backup formats, units, ports, or access paths change, update the declaration and corresponding documentation in the same commit, update the shared inventory, and check resource coverage. The portal reads files, media, database tables, and systemd state automatically; a maintenance agent must explicitly update directory purposes, API descriptions, and permission boundaries. See [portal maintenance](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/portal.md) for shared protocols, failure handling, and new-application onboarding.
 
-The portal at `/portal/` protects public access. Deployment scripts check application health through loopback, and local deployment's public check expects 401 for unauthorized access. Device authorization remains valid until explicitly revoked; shared Nginx renews the Cookie on valid requests. If this application adds an `add_header`, it must preserve shared `Set-Cookie` forwarding; see shared portal maintenance for rules and acceptance. Portal backups use this application's native consistent snapshot. At the user's request, real full-chain recovery acceptance remains deferred and must not automatically resume downloads or restoration during this maintenance.
+Portal protects both HTTPS entrances; loopback release checks remain private and public unauthorized APIs return 401. Device grants persist until revocation; preserve shared cookie-renewal headers. NAS Portal backups cold-copy complete state to external staging, not the narrower native media snapshot. Recovery remains agent-operated after confirming the recovery point.
 
 ## Phone Home-Screen Icon
 
@@ -107,6 +106,6 @@ This project is for personal use: validate the current change locally before rel
 
 See [Local Deployment and Rollback](DEPLOYMENT.md) for the complete procedure. GitHub stores only source code. Local `make release` builds, `make deploy` updates production, and documentation is synchronized separately.
 
-## Automatic Cleanup of Deployment Materials
+## Deployment-Material Cleanup
 
-Every day at 05:00 Beijing time, the server follows [automatic retention of deployment materials](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/retention.md) to retain the latest 3 successful deployments and latest 5 complete pre-deployment backups, while protecting the current version, its corresponding backup, and failed batches pending review. server-operations owns the shared implementation, lock, receipts, preview, and disable command. This project's `deploy` retains the deployment script's `recovery` marker and the daily backup's `flock` entry point. On first installation, create `/run/lock/ali-release-retention.lock` under the shared documentation before enabling the backup timer. `daily`, `manual`, business data, portal `exports`, and build materials on the maintenance computer are outside this automatic cleanup scope.
+NAS has no daily backup/release pruning. Successful upgrade acceptance removes only its private `/var/lib/server-upgrades/recipebox/<release>/` and candidate work copy; failed or uncertain copies remain for the agent. Existing ALI and maintenance-computer backups are untouched. [Legacy retention](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/retention.md) is not enabled for NAS upgrades.

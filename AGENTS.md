@@ -13,7 +13,7 @@ Read [docs/README.md](docs/README.md) first, then read architecture, API, operat
 - Record writes use `revision` and `Idempotency-Key`. Ordinary profile edits must not clear cooking logs, and consuming a pantry item must not overwrite other fields.
 - Photos are immutable, and the database and photos are backed up together. Startup must report a missing database as an error and must not initialize an empty database implicitly.
 - Tests use isolated `.local` data. Production acceptance is read-only and does not import fictional family recipes.
-- Before deployment, read server-operations and explicitly run `ssh ali 'cat /opt/AGENTS.md'`. Keep source, deployment configuration, and current documentation consistent, then, after pushing, run agent-config's `skills/server-operations/scripts/sync-docs.sh RecipeBox` to synchronize the server copies.
+- Before application work, read server-operations and `ssh nas 'cat /opt/AGENTS.md'`; read the corresponding entry point on `vps` or temporary gateway `ali` before operating that host. Current-state records activation. Keep affected source/configuration/docs consistent and synchronize managed documentation with `SYNC_HOST=nas` and agent-config's `skills/server-operations/scripts/sync-docs.sh RecipeBox` after pushing.
 - Use only the authorization table in server-operations `SKILL.md` to decide what to finish and report afterward versus what to confirm first. Documentation maintenance and synchronization do not require advance confirmation.
 - The repository is public. Do not commit the production database, photos, backups, credentials, or the server's public address.
 
