@@ -29,7 +29,7 @@ WebKit 的安装和完整检查见 [运维文档](docs/OPERATIONS.md)。
 
 ## 部署和数据
 
-独立 Go 进程、SQLite 文件与本地照片；无需 Node 常驻或独立数据库服务。Nginx 从 `/recipebox/` 转发到 loopback，systemd 管理运行和每日备份。默认没有登录，知道网址的人拥有共同读写权限。
+RecipeBox runs on `nas` as one Go process with SQLite and local photos; no persistent Node process or separate database service is required. Shared Nginx routes `/recipebox/` through ServerPortal device authentication. NAS LAN HTTPS and `vps` public HTTPS 8443 reach the same data; `ali` remains a frozen compatibility gateway. systemd manages the application and its existing cleanup job. Routine backups are agent-operated full compressed packages on verified external storage; native daily backup scheduling is disabled.
 
 精确的安装、备份、恢复、发布与限制见 [项目文档](docs/README.md)。正式库从空白开始，测试数据不随发布上传。当前模式联网使用，暂无离线同步和网页导入。
 

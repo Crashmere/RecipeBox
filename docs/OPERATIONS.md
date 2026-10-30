@@ -55,8 +55,6 @@ NAS routine backups are manual complete compressed archives on an explicitly ide
 Native compatibility checks use an isolated data copy:
 
 ```sh
-systemctl status recipebox-backup.timer
-journalctl -u recipebox-backup.service -n 50 --no-pager
 runuser -u recipebox -- /opt/recipebox/bin/recipebox backup --data /path/to/isolated-data --out /path/to/new-native-snapshot
 ```
 
@@ -74,7 +72,7 @@ The native `restore` verifies hashes/relative paths and copies photos independen
 ## Diagnostics
 
 ```sh
-systemctl status recipebox recipebox-backup.timer
+systemctl status recipebox recipebox-cleanup.timer
 journalctl -u recipebox -n 100 --no-pager
 curl --fail http://127.0.0.1:18083/healthz
 curl --fail http://127.0.0.1/recipebox/healthz
