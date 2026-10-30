@@ -16,7 +16,7 @@ The runtime identity is `recipebox`, and the deployment identity is `recipebox-d
 
 The NAS migration separates existing application cleanup from the disabled native daily backup job. Its dedicated units are `recipebox-cleanup.service` and `recipebox-cleanup.timer`; scheduling is enabled only on a host marked `nas`. The timer retains 03:45 Asia/Shanghai with up to five minutes of randomized delay and persistent catch-up. The [shared inventory](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/current-state.md) records actual installation and activation.
 
-The cleanup service runs `recipebox cleanup --data /opt/recipebox/data` as `recipebox`, with writes limited to `data`, a 256 MiB memory limit, 50% CPU quota, Nice 10, and a 15-minute timeout. It takes the shared maintenance lock, then the exclusive application deployment lock before applying the existing deleted-record/media/operation cleanup rules. Shared `/etc/tmpfiles.d/server-maintenance.conf` prepares these root-owned 0644 lock files before the units run. Portal registers these maintenance units so full cold backups coordinate their writer pause with the same locks. This operation generates no snapshot and prunes no backup or release material; native backup timers remain disabled on NAS.
+The cleanup service runs `recipebox cleanup --data /opt/recipebox/data` as `recipebox`, with writes limited to `data`, a 256 MiB memory limit, 50% CPU quota, Nice 10, and a 15-minute timeout. It takes the shared maintenance lock, then the exclusive application deployment lock before applying the existing deleted-record/media/operation cleanup rules. Shared `/etc/tmpfiles.d/server-maintenance.conf` prepares these root-owned 0644 lock files before the units run. The application declaration records these maintenance units; agent full cold backups use them to coordinate writer pauses with the same locks. This operation generates no snapshot and prunes no backup or release material; native backup timers remain disabled on NAS.
 
 ## Initial Installation
 
@@ -48,7 +48,9 @@ To test an empty database, create another uniquely named directory; do not clear
 
 ## Backup and Recovery
 
-NAS routine backups are manual complete compressed archives on an explicitly identified external volume through Portal or the agent. Pause business/background services, cold-copy all data/config/program state including recipe and cooking-log media to external staging, resume previously running services, then compress and verify the immutable copy. No routine stage/archive, native daily timer, or automatic backup deletion runs on NAS. The verified 2026-09-27 maintenance-computer archive and independent ALI Cloud Backup remain preserved in shared current-state.
+Use the agent-owned [backup and recovery runbook](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/backup-recovery.md), also at `/opt/server-context/references/backup-recovery.md` on NAS. Portal provides no backup or recovery operation.
+
+NAS routine backups are manual complete compressed archives on an explicitly identified external volume through agent-only server-operations tooling. Pause business/background services, cold-copy all data/config/program state including recipe and cooking-log media to external staging, resume previously running services, then compress and verify the immutable copy. No routine stage/archive, native daily timer, or automatic backup deletion runs on NAS. The verified 2026-09-27 maintenance-computer archive and independent ALI Cloud Backup remain preserved in shared current-state.
 
 Native compatibility checks use an isolated data copy:
 
@@ -102,7 +104,7 @@ Source-code or database-behavior changes cannot use this option as a substitute 
 
 When data roots, media, backup formats, units, ports, or access paths change, update the declaration and corresponding documentation in the same commit, update the shared inventory, and check resource coverage. The portal reads files, media, database tables, and systemd state automatically; a maintenance agent must explicitly update directory purposes, API descriptions, and permission boundaries. See [portal maintenance](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/portal.md) for shared protocols, failure handling, and new-application onboarding.
 
-Portal protects both HTTPS entrances; loopback release checks remain private and public unauthorized APIs return 401. Device grants persist until revocation; preserve shared cookie-renewal headers. NAS Portal backups cold-copy complete state to external staging, not the narrower native media snapshot. Recovery remains agent-operated after confirming the recovery point.
+Portal protects the NAS, VPS, and compatibility ALI HTTPS entrances; loopback release checks remain private and public unauthorized APIs return 401. Device grants persist until revocation; preserve shared cookie-renewal headers. Agent backups cold-copy complete NAS state to external staging, not the narrower native media snapshot. Recovery remains agent-operated after confirming the recovery point.
 
 ## Phone Home-Screen Icon
 
