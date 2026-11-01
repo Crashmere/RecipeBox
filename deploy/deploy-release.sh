@@ -11,9 +11,13 @@ if [[ $EUID -eq 0 && $# -eq 3 && ( $1 == portal || $1 == portal-check ) && $2 =~
   exec timeout 45 /opt/serverportal/bin/portal "$portal_action" --app recipebox --commit "$2" --sha256 "$3"
 fi
 
-if [[ $EUID -ne 0 || $# -ne 2 || ! $1 =~ ^[0-9a-f]{40}$ || ! $2 =~ ^[0-9a-f]{64}$ ]]; then echo 'Usage: deploy-release.sh <commit> <sha256> < binary' >&2; exit 64; fi
+if [[ $EUID -ne 0 || $# -lt 2 || $# -gt 3 || ! $1 =~ ^[0-9a-f]{40}$ || ! $2 =~ ^[0-9a-f]{64}$ ]]; then echo 'Usage: deploy-release.sh <commit> <sha256> < binary' >&2; exit 64; fi
 commit=$1
 expected=$2
+plan_token=${3:-}
+if [[ -n $plan_token && ( ! $plan_token =~ ^[A-Za-z0-9_-]+$ || ${#plan_token} -gt 4096 ) ]]; then
+  echo 'Invalid database protection plan.' >&2; exit 64
+fi
 app=/opt/recipebox
 nas=false
 upgrade=/opt/server-context/scripts/upgrade-state.py
@@ -23,6 +27,7 @@ if [[ -r /etc/server-maintenance-host && $(< /etc/server-maintenance-host) == na
   exec 8>/run/lock/server-maintenance.lock
   flock -s -n 8 || { printf 'A full backup or maintenance operation is running.\n' >&2; exit 75; }
 fi
+if [[ -n $plan_token && $nas != true ]]; then echo 'Database plans require the NAS release flow.' >&2; exit 64; fi
 exec 9>/run/lock/recipebox-deploy.lock
 flock -n 9 || { echo 'Another release is running.' >&2; exit 75; }
 test -f "$app/data/recipebox.db"
@@ -68,20 +73,22 @@ backup="$app/backups/before-deploy-$(basename "$release")"
 stopped=true
 systemctl stop recipebox
 if [[ $nas == true ]]; then
-  candidate_data=$(python3 "$upgrade" begin --app recipebox --release "$(basename "$release")")
+  candidate_data=$(python3 "$upgrade" begin --app recipebox --release "$(basename "$release")" --plan-token "$plan_token")
   backup="/var/lib/server-upgrades/recipebox/$(basename "$release")"
   runuser -u recipebox -- timeout 30 "$release/recipebox" check --data "$candidate_data"
 else
   runuser -u recipebox -- timeout 180 "$app/bin/recipebox" backup --data "$app/data" --out "$backup"
 fi
 # Uploaded executable always runs as the application identity.
-runuser -u recipebox -- timeout 30 "$release/recipebox" check --data "$app/data"
+if [[ $nas != true ]]; then
+  runuser -u recipebox -- timeout 30 "$release/recipebox" check --data "$app/data"
+fi
 install -m 0755 "$release/recipebox" "$app/bin/recipebox.next"
 replaced=true
 mv -f "$app/bin/recipebox.next" "$app/bin/recipebox"
 systemctl start recipebox
 wait_healthy
-if [[ $nas == true ]]; then
+if [[ $nas == true && -d $backup ]]; then
   systemctl stop recipebox
   python3 "$upgrade" verify --app recipebox --release "$(basename "$release")"
   systemctl start recipebox
