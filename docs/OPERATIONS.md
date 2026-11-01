@@ -6,6 +6,8 @@ RecipeBox's application target is `nas`; `vps` exposes public HTTPS port 8443 an
 
 Image sizes: Nginx permits requests up to 26 MiB, and the program permits each image up to 25 MiB. If an image over 1 MiB returns 500 before reaching the program, see [shared authentication incorrectly blocks large requests](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#shared-authentication-incorrectly-blocks-large-requests). The shared fix preserves this application's upload limit.
 
+For slow photo uploads, follow [Upload throughput and request limits](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/conventions.md#upload-throughput-and-request-limits), also at `/opt/server-context/references/conventions.md` on NAS. This application's Nginx location retains default request buffering; image validation and processing run before the response confirms completion, so distinguish transmission time from server processing time.
+
 ## Layout
 
 `/opt/recipebox/bin/recipebox` is the Linux amd64 program with embedded pages. `config` contains this project's units/location; `data` contains `recipebox.db`, `media`, and `tmp`; `backups` preserves legacy native snapshots without NAS scheduling; `docs` and `AGENTS.md` are controlled documentation copies; `releases` retains program history without NAS scheduled pruning; and `current-commit` identifies the program source. NAS upgrade protection instead lives in root-private `/var/lib/server-upgrades/recipebox/<release>/`.
