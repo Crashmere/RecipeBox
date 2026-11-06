@@ -94,7 +94,7 @@ function random() {
     <section class="hero">
       <div class="hero-copy">
         <div class="eyebrow"><span></span> THE FAMILY COOKBOOK</div>
-        <h1>把家的味道，<br /><em>一页页留住。</em></h1>
+        <h1>把喜欢的菜，<br /><em>一页页留住。</em></h1>
         <p>那些吃过还想吃的菜，和厨房里的小小心得。</p>
         <RouterLink to="/new" class="btn primary"
           ><Icon name="plus" />记一道新菜</RouterLink
@@ -255,7 +255,7 @@ function random() {
       </article>
       <RouterLink to="/new" class="add-card"
         ><div><Icon name="plus" :size="30" /></div>
-        <h3>下一道家的味道</h3>
+        <h3>下一道菜谱</h3>
         <p>把今天的美味也记下来</p></RouterLink
       >
     </div>

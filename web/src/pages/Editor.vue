@@ -159,7 +159,7 @@ async function save() {
     const result = await write(id, data);
     saved.value = true;
     forget(storageKey);
-    notify(isPantry.value ? "常备食品已保存" : "这道家的味道，记下了");
+    notify(isPantry.value ? "常备食品已保存" : "菜谱已保存");
     router.push(isPantry.value ? "/pantry" : "/recipes/" + result.id);
   } catch (e) {
     error.value = (e as Error).message;

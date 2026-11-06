@@ -25,6 +25,6 @@ const router = createRouter({
   },
 });
 router.afterEach(() => {
-  document.title = "RecipeBox · 家的味道";
+  document.title = "RecipeBox";
 });
 createApp(App).use(router).mount("#app");

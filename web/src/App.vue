@@ -16,7 +16,7 @@ watch(
     <div class="header-inner">
       <RouterLink to="/" class="brand"
         ><img :src="base + 'recipebox.svg'" alt="" /><span
-          >RecipeBox<small>家的味道，慢慢收藏</small></span
+          >RecipeBox</span
         ></RouterLink
       >
       <nav class="desktop-nav" aria-label="主导航">

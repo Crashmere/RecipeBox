@@ -106,7 +106,7 @@ async function trash() {
       <template v-else
         ><div class="detail-top">
           <div>
-            <span class="eyebrow">{{ entry.category || "家的味道" }}</span>
+            <span class="eyebrow">{{ entry.category || "菜谱" }}</span>
             <h1>{{ entry.name }}</h1>
             <div class="recipe-meta">
               <span v-if="entry.minutes"
