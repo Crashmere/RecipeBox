@@ -12,7 +12,7 @@ For slow photo uploads, follow [Upload throughput and request limits](https://gi
 
 `/opt/recipebox/bin/recipebox` is the Linux amd64 program with embedded pages. `config` contains this project's units/location; `data` contains `recipebox.db`, `media`, and `tmp`; `backups` preserves legacy native snapshots without NAS scheduling; `docs` and `AGENTS.md` are controlled documentation copies; `releases` retains program history without NAS scheduled pruning; and `current-commit` identifies the program source. NAS upgrade protection instead lives in root-private `/var/lib/server-upgrades/recipebox/<release>/`.
 
-The runtime identity is `recipebox`, and the deployment identity is `recipebox-deploy`. `data`/`backups` use 0700 and files use 0600; root manages programs and configuration. The service listens on `127.0.0.1:18083` and is reached through shared Nginx under `/recipebox/`, without adding a public listening port. systemd limits writes to `data`, memory to 640 MiB, and CPU to 100%.
+The runtime identity is `recipebox`, and the deployment identity is `recipebox-deploy`. `data`/`backups` use 0700 and files use 0600; root manages programs and configuration. The service listens on `127.0.0.1:18083` and is reached through shared Nginx under `/recipebox/`, without adding a public listening port. systemd limits writes to `data`, memory to 640 MiB, CPU to 100%, and the complete service process tree to 256 tasks. Upload processing remains serialized; the task budget accommodates Go and codec-owned threads, not concurrent photo jobs.
 
 ## Application Cleanup
 
@@ -90,7 +90,7 @@ Every record write emits one journal line, `write <path> action=… status=… r
 journalctl -u recipebox --since '-1h' --no-pager | grep ' write '
 ```
 
-For a missing or damaged database, inspect backups and permissions; do not use `init` to create an empty database and conceal the error. For 507, check root-disk and photo quotas; for 429, check the backup lock and concurrent uploads; for 422, check image format and vips logs. libvips 8.15 and 8.18 both use `--export-profile=srgb`.
+For a missing or damaged database, inspect backups and permissions; do not use `init` to create an empty database and conceal the error. For 507, check root-disk and photo quotas; for 429, check the backup lock and concurrent uploads; for 422, check image format and vips logs. A conversion ending with `signal: killed` can be the 40-second image-processing deadline rather than an OOM kill. Compare the service's `pids.events` and `memory.events` before attributing it to another application's load; follow [native media task-limit diagnosis](https://github.com/Crashmere/agent-config/blob/main/skills/server-operations/references/common-issues.md#native-media-processing-exhausts-a-service-task-limit). libvips 8.15 and 8.18 both use `--export-profile=srgb`.
 
 After pushing managed documentation, run `SYNC_HOST=nas ~/agent-config/skills/server-operations/scripts/sync-docs.sh RecipeBox`; it verifies drift/files and records `docs/SOURCE`. Shared gateway context synchronizes to its own hosts.
 

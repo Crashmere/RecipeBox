@@ -21,7 +21,7 @@ ProtectSystem=strict
 ReadWritePaths=/opt/recipebox/data
 MemoryMax=640M
 CPUQuota=100%
-TasksMax=64
+TasksMax=256
 
 [Install]
 WantedBy=multi-user.target
